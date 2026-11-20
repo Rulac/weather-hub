@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.33">
+<meta name="app-version" content="2026-11-20.34">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -170,7 +170,7 @@
                  -webkit-justify-content: flex-start; justify-content: flex-start;
                  padding-top: 16px; }
   .hours { display: -webkit-flex; display: flex; padding: 2px 10px 4px;
-           overflow-x: auto; -webkit-overflow-scrolling: touch; }
+           overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 135px; }
   .hour { -webkit-flex: 1 0 38px; flex: 1 0 38px; text-align: center;
           padding: 3px 0 4px; border-radius: 9px; margin: 0 1px; }
   .hour.cur { background: #171717; }
@@ -239,15 +239,14 @@
   .hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .ct { border-collapse: collapse; width: 100%; font-size: 14px; }
   .ct th, .ct td { padding: 2px 1px; border-bottom: 1px solid #161616;
-                   text-align: center; }
+                   text-align: center; text-wrap: nowrap; }
   .ct th { font-weight: 500; color: #9a9a9a; font-size: 12px; }
-  .ct th:first-child, .ct td.src { text-align: left; width: 74px; }
-  .ct td.src { font-size: 13px; color: #9a9a9a; white-space: nowrap;
-               padding-left: 2px; }
+  .ct th:first-child, .ct td.src { text-align: left; width: 62px; }
+  .ct td.src { font-size: 12px; color: #9a9a9a; white-space: normal;
+               padding-left: 2px; line-height: 0.9; }
   .ct td.src.off { color: #4f4f4f; }
   /* the hourly table carries an icon in every cell, so it runs a size smaller */
   #hour-table { font-size: 13px; }
-  #hour-table th:first-child, #hour-table td.src { width: 62px; }
   #hour-table td .ic { width: 15px; height: 15px; margin-right: 0;
                        vertical-align: -3px; }
   .ct .hh { display: block; font-size: 12px; color: #9a9a9a; }
@@ -599,7 +598,7 @@
         ["usporedba", "Dvije tablice, jedan redak po izvoru. Gornja uspore\u0111uje sljede\u0107a 24 sata ikonom i temperaturom, donja sve dane s ikonom i najvi\u0161om/najni\u017eom. Zadnji redak je \u00b1 razlika najvi\u0161ih me\u0111u modelima; izvor bez podataka ostaje siv."],
         ["sati", "Gornja traka pokazuje sljede\u0107a 24 sata: ikonu, temperaturu i, ako je iznad 20 %, vjerojatnost oborine. Ispod nje je traka po danima."],
         ["no\u0107ne ikone", "Kad je sunce za\u0161lo, vedro je mjesec, a djelomi\u010dno obla\u010dno mjesec s oblakom. Danju su ikone sa suncem."],
-        ["MET Norway", "Norve\u0161ki model (met.no), do <b>10 dana</b>. Dolazi preko Open-Metea, jer iPad 9 ne mo\u017ee do njihovog API-ja."],
+        ["Yr.no", "Norve\u0161ki model MET Norway (yr.no), do <b>10 dana</b>. Dolazi preko Open-Metea, jer iPad 9 ne mo\u017ee do njihovog API-ja."],
         ["\u00b7", "Taj izvor za taj dan nema podataka \u2014 horizont mu je kra\u0107i (KNMI i DMI ~5 dana, ICON ~7, GFS 16)."],
         ["prosjek 2020\u20132024", "Klimatolo\u0161ke normale za teku\u0107i mjesec: prosje\u010dna najni\u017ea i najvi\u0161a dnevna te mjese\u010dne oborine."],
         ["\u00b11,4\u00b0", "Odstupanje sljede\u0107ih 8 dana od normale \u2014 toplije crvenkasto, hladnije plavkasto."],
@@ -631,7 +630,7 @@
         ["comparison", "Two tables, one row per provider. The top one compares the next 24 hours by icon and temperature, the bottom one every day with icon and high/low. The last row is the \u00b1 spread of highs across the models; a provider without data stays grey."],
         ["hours", "The top strip shows the next 24 hours: icon, temperature and, above 20 %, the chance of precipitation. The daily strip sits below it."],
         ["night icons", "Once the sun is down, clear is a moon and partly cloudy is a moon behind a cloud. By day the icons carry a sun."],
-        ["MET Norway", "The Norwegian model (met.no), up to <b>10 days</b>. It arrives through Open-Meteo, because iOS 9 cannot reach their API."],
+        ["Yr.no", "The Norwegian MET Norway model (yr.no), up to <b>10 days</b>. It arrives through Open-Meteo, because iOS 9 cannot reach their API."],
         ["\u00b7", "That provider has no data for that day \u2014 its horizon is shorter (KNMI and DMI ~5 days, ICON ~7, GFS 16)."],
         ["2020\u20132024 average", "Climate normals for the running month: average daily low, average daily high and monthly precipitation."],
         ["\u00b11.4\u00b0", "How the next 8 days compare to the norm \u2014 warmer in red, colder in blue."],
@@ -652,7 +651,7 @@
     ["gfs_seamless", "GFS"],
     ["knmi_seamless", "KNMI"],
     ["dmi_seamless", "DMI"],
-    ["met", "MET Norway"]
+    ["met", "Yr.no"]
   ];
   var EXTRA_SOURCES = [
     ["meteoblue", "Meteoblue"],

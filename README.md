@@ -55,7 +55,7 @@ live in `index.html`; every number is cached per place in `localStorage`.
 | GFS (NOAA) | 16 days | Open-Meteo |
 | KNMI HARMONIE | 5 days | Open-Meteo |
 | DMI HARMONIE | 5 days | Open-Meteo |
-| MET Norway | 10 days | `api.met.no`, aggregated to local days on the device |
+| MET Norway (Yr.no) | 10 days | `api.met.no`, aggregated to local days on the device |
 | Meteoblue | 14 days | key typed in the install panel |
 | Visual Crossing | 15 days | key typed in the install panel |
 
