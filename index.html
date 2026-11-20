@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.46">
+<meta name="app-version" content="2026-11-20.47">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -367,11 +367,11 @@
     .now .glyphcol { -webkit-flex: 0 0 78px; flex: 0 0 78px;
                      -webkit-order: 1; order: 1; }
     .now .glyph { font-size: 64px; width: 78px; }
-    .now .clock { font-size: 18px; }
+    .now .clock { display: none; }
     .now .temp { font-size: 58px; letter-spacing: -2px;
                  -webkit-order: 2; order: 2; }
     .now .temp .unit { font-size: 22px; vertical-align: 14px; }
-    .now .place { margin-left: auto; max-width: 46%;
+    .now .place { margin-left: auto; max-width: 46%; padding-top: 17px;
                   -webkit-order: 3; order: 3; }
     .now .place .name { font-size: 25px; line-height: 1.15; white-space: nowrap;
                         overflow: hidden; text-overflow: ellipsis; }
