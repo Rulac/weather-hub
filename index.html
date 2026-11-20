@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.34">
+<meta name="app-version" content="2026-11-20.35">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -158,7 +158,8 @@
                         overflow: hidden; text-overflow: ellipsis; }
 
   /* top-level switch: the forecast (hours, then days) or the comparison */
-  .viewsbar { padding: 0 18px 6px; }
+  /* the gap under the buttons lives on the panels, so all three start alike */
+  .viewsbar { padding: 0 18px; }
   .views { -webkit-flex: 1; flex: 1; min-height: 0;
            display: -webkit-flex; display: flex;
            -webkit-flex-direction: column; flex-direction: column; }
@@ -223,45 +224,64 @@
   .cmp { display: none; padding: 0 14px; }
   .cmp.on { display: -webkit-flex; display: flex; -webkit-flex: 1; flex: 1;
             min-height: 0; -webkit-flex-direction: column; flex-direction: column; }
+  #panel-byhour.on { padding-top: 16px; }
   .ctwrap { -webkit-flex: 1; flex: 1; min-height: 0; overflow-y: auto;
             -webkit-overflow-scrolling: touch; }
   .mstats { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap;
             flex-wrap: wrap; -webkit-align-items: baseline; align-items: baseline;
-            font-size: 14px; color: #7f7f7f; margin: 13px 0 0; }
-  .mstats b { color: #e8eef7; font-weight: 600; font-size: 15px; }
+            font-size: 15px; color: #7f7f7f; margin: 10px 0; }
+  .mstats b { color: #e8eef7; font-weight: 600; font-size: 16px; }
   .mstats .stat { white-space: nowrap; }
   .mstats .sp { width: 12px; }
   .mstats .up { color: #ff8a6b; }
   .mstats .down { color: #6bb6ff; }
 
-  .cmpsec { font-size: 12px; color: #666666; text-transform: uppercase;
-            letter-spacing: 1px; margin: 13px 0 0; }
-  .hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .ct { border-collapse: collapse; width: 100%; font-size: 14px; }
-  .ct th, .ct td { padding: 2px 1px; border-bottom: 1px solid #161616;
-                   text-align: center; text-wrap: nowrap; }
-  .ct th { font-weight: 500; color: #9a9a9a; font-size: 12px; }
-  .ct th:first-child, .ct td.src { text-align: left; width: 62px; }
-  .ct td.src { font-size: 12px; color: #9a9a9a; white-space: normal;
-               padding-left: 2px; line-height: 0.9; }
+  /* One table per screen, and the whole horizon has to fit it: the cell stacks
+     the icon over the numbers, so a column needs about thirty pixels instead of
+     fifty-five and sixteen days (or twenty-four hours) fit without scrolling. */
+  .ct { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  .ct th, .ct td { padding: 9px 0; border-bottom: 1px solid #161616;
+                   text-align: center; }
+  .ct th { font-weight: 500; color: #9a9a9a; font-size: 13px; }
+  .ct th:first-child, .ct td.src { text-align: left; width: 60px; }
+  .ct td.src { font-size: 13px; color: #9a9a9a; white-space: normal;
+               padding-left: 2px; line-height: 1.05; }
   .ct td.src.off { color: #4f4f4f; }
-  /* the hourly table carries an icon in every cell, so it runs a size smaller */
-  #hour-table { font-size: 13px; }
-  #hour-table td .ic { width: 15px; height: 15px; margin-right: 0;
-                       vertical-align: -3px; }
-  .ct .hh { display: block; font-size: 12px; color: #9a9a9a; }
-  .ct .dd2 { display: block; font-size: 10px; color: #5a5a5a; line-height: 1.2;
-             min-height: 12px; }
+  .ct .hh { display: block; font-size: 13px; color: #9a9a9a; }
+  .ct .dd2 { display: block; font-size: 11px; color: #5a5a5a; line-height: 1.2;
+             min-height: 13px; }
   .ct th.weekend, .ct td.weekend { background: #121212; }
   .ct th.cur, .ct td.cur { background: #171717; }
-  .ct td.t { white-space: nowrap; }
-  .ct td .ic { width: 18px; height: 18px; margin-right: 1px;
-               vertical-align: -4px; }
-  .ct .hi { font-weight: 600; }
-  .ct .lo { color: #7f7f7f; }
+  .ct td .ic { display: block; width: 32px; height: 32px; margin: 0 auto 2px;
+               vertical-align: baseline; }
+  .ct .hi, .ct .lo { display: block; white-space: nowrap; }
+  .ct .hi { font-size: 19px; font-weight: 600; line-height: 1.1; }
+  .ct .lo { font-size: 15px; color: #7f7f7f; line-height: 1.1; }
   .ct .na { color: #4a4a4a; }
-  .ct tr.spread td { color: #ffb020; font-size: 12px; padding-bottom: 4px; }
+  .ct tr.spread td { color: #ffb020; font-size: 14px; padding-bottom: 6px; }
   .ct tr.spread td.src { color: #666666; }
+  /* five rows instead of seven leave more air: the hours table breathes more */
+  #hour-table { font-size: 15px; }
+  #hour-table th, #hour-table td { padding: 16px 0; }
+  #hour-table td .ic { width: 22px; height: 22px; }
+
+  /* Landscape has half the height: the same seven rows have to fit in it, so
+     the cells lose their air instead of the table losing its last days. */
+  @media (max-height: 820px) {
+    .ct th, .ct td { padding: 2px 0; }
+    .ct td .ic { width: 20px; height: 20px; margin-bottom: 1px; }
+    .ct .hi { font-size: 15px; }
+    .ct .lo { font-size: 11px; }
+    .ct th { font-size: 12px; }
+    .ct .hh { font-size: 12px; }
+    .ct .dd2 { font-size: 10px; min-height: 11px; }
+    .ct td.src { font-size: 11px; }
+    /* five rows and plenty of height: the hours table can grow instead of
+       shrinking with the rest */
+    #hour-table { font-size: 19px; }
+    #hour-table th, #hour-table td { padding: 9px 0; }
+    #hour-table td .ic { width: 28px; height: 28px; }
+  }
   .ct tbody tr:last-child td { border-bottom: none; }
 
   /* night dimming: 22:00-07:00 the whole screen is darkened so the kitchen
@@ -319,7 +339,8 @@
   <div class="viewsbar">
     <div class="seg" id="panel-switch">
       <button type="button" data-panel="hours"></button>
-      <button type="button" data-panel="compare"></button>
+      <button type="button" data-panel="byhour"></button>
+      <button type="button" data-panel="byday"></button>
     </div>
   </div>
 
@@ -330,17 +351,20 @@
       <div class="strip" id="strip"></div>
     </div>
 
-    <div class="cmp" id="panel-cmp">
-      <div class="mstats" id="month-stats"></div>
+    <div class="cmp" id="panel-byhour">
       <div class="ctwrap">
-        <div class="cmpsec" id="cmp-hours-title"></div>
         <div class="hscroll">
           <table class="ct" id="hour-table">
             <thead><tr id="hour-head"></tr></thead>
             <tbody id="hour-body"></tbody>
           </table>
         </div>
-        <div class="cmpsec" id="cmp-days-title"></div>
+      </div>
+    </div>
+
+    <div class="cmp" id="panel-byday">
+      <div class="mstats" id="month-stats"></div>
+      <div class="ctwrap">
         <div class="hscroll">
           <table class="ct" id="day-table">
             <thead><tr id="day-head"></tr></thead>
@@ -425,7 +449,6 @@
   var STRINGS = {
     hr: {
       lang: "hr",
-      panelCompare: "usporedba",
       panelHours: "sati i dani",
       nowLabel: "sada",
       cmpHours: "po satima",
@@ -492,7 +515,6 @@
     },
     en: {
       lang: "en",
-      panelCompare: "comparison",
       panelHours: "hours & days",
       nowLabel: "now",
       cmpHours: "by the hour",
@@ -595,7 +617,7 @@
       notes: [
         ["11\u00b0 / 2\u00b0", "Najvi\u0161a i najni\u017ea dnevna temperatura."],
         ["\u00b15", "Modeli se ne sla\u017eu: razlika najvi\u0161ih dnevnih me\u0111u svim modelima. Ispod 4 \u00b0C se ne prikazuje."],
-        ["usporedba", "Dvije tablice, jedan redak po izvoru. Gornja uspore\u0111uje sljede\u0107a 24 sata ikonom i temperaturom, donja sve dane s ikonom i najvi\u0161om/najni\u017eom. Zadnji redak je \u00b1 razlika najvi\u0161ih me\u0111u modelima; izvor bez podataka ostaje siv."],
+        ["usporedba", "Dvije plohe svaka sa svojim tabom, jedan redak po izvoru: <b>po satima</b> uspore\u0111uje sljede\u0107a 24 sata ikonom i temperaturom, <b>po danima</b> sve dane s ikonom i najvi\u0161om/najni\u017eom. Zadnji redak je \u00b1 razlika najvi\u0161ih me\u0111u modelima; izvor bez podataka ostaje siv."],
         ["sati", "Gornja traka pokazuje sljede\u0107a 24 sata: ikonu, temperaturu i, ako je iznad 20 %, vjerojatnost oborine. Ispod nje je traka po danima."],
         ["no\u0107ne ikone", "Kad je sunce za\u0161lo, vedro je mjesec, a djelomi\u010dno obla\u010dno mjesec s oblakom. Danju su ikone sa suncem."],
         ["Yr.no", "Norve\u0161ki model MET Norway (yr.no), do <b>10 dana</b>. Dolazi preko Open-Metea, jer iPad 9 ne mo\u017ee do njihovog API-ja."],
@@ -627,7 +649,7 @@
       notes: [
         ["11\u00b0 / 2\u00b0", "Daily high and low."],
         ["\u00b15", "Models disagree: the spread of daily highs across every model. Hidden below 4 \u00b0C."],
-        ["comparison", "Two tables, one row per provider. The top one compares the next 24 hours by icon and temperature, the bottom one every day with icon and high/low. The last row is the \u00b1 spread of highs across the models; a provider without data stays grey."],
+        ["comparison", "Two screens, each on its own tab, one row per provider: <b>by the hour</b> compares the next 24 hours by icon and temperature, <b>by the day</b> every day with icon and high/low. The last row is the \u00b1 spread of highs across the models; a provider without data stays grey."],
         ["hours", "The top strip shows the next 24 hours: icon, temperature and, above 20 %, the chance of precipitation. The daily strip sits below it."],
         ["night icons", "Once the sun is down, clear is a moon and partly cloudy is a moon behind a cloud. By day the icons carry a sun."],
         ["Yr.no", "The Norwegian MET Norway model (yr.no), up to <b>10 days</b>. It arrives through Open-Meteo, because iOS 9 cannot reach their API."],
@@ -1685,8 +1707,6 @@
   /* All of it in two tables, read the same way: one line per provider, hours
      across for the next day, days across for the whole horizon. */
   function renderCompare(place, series) {
-    $("cmp-hours-title").textContent = t("cmpHours");
-    $("cmp-days-title").textContent = t("cmpDays");
     renderHourCompare(place);
     renderDayCompare(place, series);
   }
@@ -1745,12 +1765,25 @@
     $("hour-body").innerHTML = body;
   }
 
+  /* A provider's list starts where its own fetch started, and a source with a
+     shorter horizon stops earlier, so the columns have to be matched by date.
+     Reading them by position shifts a whole row by a day as soon as one source
+     is a little older than the others, and empties the column completely when
+     it is older by more than its horizon. */
+  function dayIndex(provider, date) {
+    if (!provider || !provider.time) return -1;
+    for (var i = 0; i < provider.time.length; i++) {
+      if (String(provider.time[i]).slice(0, 10) === date) return i;
+    }
+    return -1;
+  }
+
   /* A provider that answered keeps its row; a dead one is dimmed but stays,
      so a broken source is visible instead of silently missing. */
   function renderDayCompare(place, series) {
     var sources = sourcesFor(place);
     var head = "<th></th>", body = "", i, j, date, provider, hi, lo, weekend;
-    var weekends = [], highs, deviation;
+    var weekends = [], highs, deviation, at;
     if (!series) {
       $("day-head").innerHTML = head;
       $("day-body").innerHTML = "";
@@ -1770,14 +1803,15 @@
       body += '<tr><td class="src' + (provider ? "" : " off") + '">' +
         sources[j][1] + "</td>";
       for (i = 0; i < series.time.length; i++) {
-        hi = provider && i < provider.max.length ? provider.max[i] : null;
-        lo = provider && i < provider.min.length ? provider.min[i] : null;
+        at = dayIndex(provider, series.time[i]);
+        hi = at >= 0 ? provider.max[at] : null;
+        lo = at >= 0 ? provider.min[at] : null;
         body += "<td" + (weekends[i] ? ' class="weekend"' : "") + ">" +
           (hi === null
             ? '<span class="na">\u00b7</span>'
-            : iconForWmo(provider.code ? provider.code[i] : null) +
+            : iconForWmo(provider.code ? provider.code[at] : null) +
               '<span class="hi">' + round(hi) + "\u00b0</span>" +
-              '<span class="lo">/' + round(lo) + "\u00b0</span>") +
+              '<span class="lo">' + round(lo) + "\u00b0</span>") +
           "</td>";
       }
       body += "</tr>";
@@ -1788,7 +1822,8 @@
       highs = [];
       for (j = 0; j < sources.length; j++) {
         provider = seriesFor(place, sources[j][0]);
-        highs.push(provider && i < provider.max.length ? provider.max[i] : null);
+        at = dayIndex(provider, series.time[i]);
+        highs.push(at >= 0 ? provider.max[at] : null);
       }
       deviation = spread(highs);
       body += "<td>" +
@@ -1839,15 +1874,22 @@
         "\u00b0</b></span>");
   }
 
+  /* The three screens share one switch: the forecast, the providers by the
+     hour, the providers by the day. Only one is mounted at a time, so each
+     table gets the whole height under the bar. */
+  var PANELS = ["hours", "byhour", "byday"];
+
   function renderPanels() {
-    var showCompare = state.panel === "compare";
-    $("panel-forecast").className = "forecast" + (showCompare ? "" : " on");
-    $("panel-cmp").className = "cmp" + (showCompare ? " on" : "");
-    var buttons = $("panel-switch").getElementsByTagName("button"), i, value;
+    var show = state.panel, i, value;
+    $("panel-forecast").className = "forecast" + (show === "hours" ? " on" : "");
+    $("panel-byhour").className = "cmp" + (show === "byhour" ? " on" : "");
+    $("panel-byday").className = "cmp" + (show === "byday" ? " on" : "");
+    var buttons = $("panel-switch").getElementsByTagName("button");
     for (i = 0; i < buttons.length; i++) {
       value = buttons[i].getAttribute("data-panel");
-      buttons[i].className = value === (showCompare ? "compare" : "hours") ? "on" : "";
-      buttons[i].textContent = value === "compare" ? t("panelCompare") : t("panelHours");
+      buttons[i].className = value === show ? "on" : "";
+      buttons[i].textContent = value === "hours" ? t("panelHours")
+        : value === "byhour" ? t("cmpHours") : t("cmpDays");
     }
   }
 
@@ -2167,10 +2209,17 @@
 
   function setPanel(panel) {
     if (panel === state.panel) return;
-    if (panel !== "hours" && panel !== "compare") return;
+    if (PANELS.indexOf(panel) < 0) return;
     state.panel = panel;
     try { window.localStorage.setItem(STORE_PANEL, panel); } catch (e) {}
     if (state.data) render();
+  }
+
+  /* One swipe moves to the neighbouring screen, in either direction. */
+  function stepPanel(direction) {
+    var at = PANELS.indexOf(state.panel);
+    if (at < 0) return;
+    setPanel(PANELS[at + direction]);
   }
 
   $("panel-switch").onclick = function (event) {
@@ -2204,7 +2253,7 @@
     var dx = touch.clientX - swipeStartX;
     var dy = touch.clientY - swipeStartY;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    setPanel(dx < 0 ? "compare" : "hours");
+    stepPanel(dx < 0 ? 1 : -1);
   }, false);
 
   $("refresh").onclick = function () {
@@ -2254,7 +2303,7 @@
   state.favs = parseFavorites(savedFavs);
   try {
     var savedPanel = window.localStorage.getItem(STORE_PANEL);
-    if (savedPanel === "hours" || savedPanel === "compare") state.panel = savedPanel;
+    if (PANELS.indexOf(savedPanel) >= 0) state.panel = savedPanel;
   } catch (e) {}
   state.lang = STRINGS[savedLang] ? savedLang
     : (/^hr/i.test(navigator.language || "") ? "hr" : "en");

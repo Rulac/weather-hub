@@ -32,16 +32,17 @@ again.
 | Hours | the next 24 hours: icon, temperature, chance of rain |
 | Days | icon, daily high and low, `±n` when the models disagree |
 | Clock | current time under the weather icon |
-| `SATI I DANI` / `USPOREDBA` | switch between the forecast and the provider comparison |
-| Comparison | by the hour and by the day: one row per provider, icon + temperature per hour, icon + high/low per day |
+| `SATI I DANI` / `PO SATIMA` / `PO DANIMA` | switch between the forecast and the two comparison screens |
+| Comparison | one row per provider: by the hour, icon + temperature; by the day, icon + high/low |
+| Normals | monthly averages above the daily comparison, with the 8-day departure |
 | Footer | data age and a one-word status, legend, install, version, refresh |
 
 Weekends are tinted, today is marked, the screen dims between 22:00 and 07:00
 (a tap lifts it for a minute), and everything is translated to Croatian and
 English. Icons follow the sun: clear and partly cloudy are a moon after dark.
 Tapping the data age opens a **log** with timestamped lines about every source.
-The hourly strip scrolls sideways on a narrow screen; the comparison table
-scrolls down.
+The hourly strip scrolls sideways on a narrow screen; each comparison screen
+scrolls down on its own.
 
 ## Where the data comes from
 
