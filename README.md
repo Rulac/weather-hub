@@ -114,6 +114,8 @@ the footer forces a cache-busted reload — the way out when the iPad is stuck.
 ## The profile
 
 `trust.mobileconfig` adds ISRG Root X1/X2 and the Google Trust Services roots.
+The setup panel shows its install button only on iOS 9; newer devices already
+have those roots and never see it.
 
 Try the button in the **setup** panel first; some iOS builds install a
 mislabeled profile. If Safari only displays the file, GitHub Pages is sending

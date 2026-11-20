@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.48">
+<meta name="app-version" content="2026-11-20.49">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -431,6 +431,22 @@
     .foottools #foot-right { white-space: normal; overflow: visible;
                              text-overflow: clip; margin-right: 10px;
                              text-align: center; }
+
+    /* legend and setup: one column, and short labels that do not eat half
+       the row; the key row and its buttons get the full width */
+    .lg-icons .lg-icon { width: 100%; }
+    .lg-row .k { width: 124px; -webkit-flex: 0 0 124px; flex: 0 0 124px; }
+    .lg-keyrow { display: block; }
+    .lg-keyrow .k { width: auto; -webkit-flex: none; flex: none;
+                    margin-bottom: 6px; }
+    .lg-keyrow .v { width: 100%; }
+    .lg-keyactions { display: block; }
+    .lg-keyactions .k { display: none; }
+    .lg-keyactions .v { display: -webkit-flex; display: flex; }
+    .lg-keyactions .keybtn { -webkit-flex: 1 1 0; flex: 1 1 0;
+                             margin: 0 6px 0 0; padding: 10px 8px;
+                             font-size: 14px; }
+    .lg-keyactions .keybtn:last-child { margin-right: 0; }
   }
 </style>
 </head>
@@ -626,7 +642,8 @@
       logTitle: "Zapisnik",
       installNote: "Ako neki link vrati gre\u0161ku o certifikatu, tom izvoru nedostaje korijen u iPadu. Profil se instalira preko ra\u010dunala: python3 scripts/serve_profile.py, pa na iPadu otvori prikazanu adresu.",
       installKeys: "Klju\u010devi (ostaju samo na ovom ure\u0111aju)",
-      installSave: "Spremi i osvje\u017ei",
+      installSave: "Spremi klju\u010d i osvje\u017ei",
+      installKeyHint: "Spremanje se odnosi samo na Meteoblue klju\u010d; podaci se odmah ponovno dohvate.",
       installReset: "Tvorni\u010dke postavke",
       installResetAsk: "Obrisati sve lokalne podatke, favorite i klju\u010deve?",
       kiosk: "kiosk",
@@ -701,7 +718,8 @@
       logTitle: "Log",
       installNote: "If a link reports a certificate error, that source\u2019s root is missing on the iPad. The profile is installed from a computer: python3 scripts/serve_profile.py, then open the printed address on the iPad.",
       installKeys: "Keys (stay on this device only)",
-      installSave: "Save and refresh",
+      installSave: "Save key and refresh",
+      installKeyHint: "Saving applies only to the Meteoblue key; the data is fetched again right away.",
       installReset: "Factory settings",
       installResetAsk: "Erase all local data, favourites and keys?",
       kiosk: "kiosk",
@@ -1002,6 +1020,13 @@
     if (/Firefox\//.test(ua)) return "Firefox";
     if (/Safari/.test(ua)) return "Safari";
     return navigator.appName || "browser";
+  }
+
+  /* The trust profile exists for iOS 9, which lacks the roots these services
+     use. Modern devices already have them, so the button would only confuse. */
+  function needsProfile() {
+    var match = /OS (\d+)[._](\d+)/.exec(navigator.userAgent || "");
+    return !!match && parseInt(match[1], 10) < 10;
   }
 
   /* NOAA solar position: minutes of UTC for a given zenith angle. Returns null
@@ -1758,10 +1783,12 @@
                        REFRESH_STEPS[i] === 0 ? t("refreshNow")
                          : REFRESH_STEPS[i] + " " + t("refreshMinLabel"));
     }
-    html += '<div class="lg-h">' + t("installProfile") + "</div>";
-    html += '<a class="installbtn" href="https://rulac.github.io/weather-hub/trust.mobileconfig">' +
-      t("installProfileOpen") + "</a>";
-    html += '<div class="lg-note" style="margin-top:8px">' + t("installProfileHint") + "</div>";
+    if (needsProfile()) {
+      html += '<div class="lg-h">' + t("installProfile") + "</div>";
+      html += '<a class="installbtn" href="https://rulac.github.io/weather-hub/trust.mobileconfig">' +
+        t("installProfileOpen") + "</a>";
+      html += '<div class="lg-note" style="margin-top:8px">' + t("installProfileHint") + "</div>";
+    }
     html += '<div class="lg-h">' + t("installSources") + "</div>";
     for (i = 0; i < legend.sources.length; i++) {
       url = legend.sources[i][2];
@@ -1777,15 +1804,18 @@
         hostOf(API_LINKS[i][1]) + "</a></div></div>";
     }
     html += '<div class="lg-h">' + t("installKeys") + "</div>";
-    html += '<div class="lg-row"><div class="k">Meteoblue</div>' +
+    html += '<div class="lg-row lg-keyrow"><div class="k">Meteoblue</div>' +
       '<div class="v"><input class="keyinput" id="key-meteoblue" type="text" ' +
       'autocapitalize="off" autocorrect="off" spellcheck="false" value="' +
       getKey("meteoblue") + '"></div></div>';
-    html += '<div class="lg-row"><div class="k"></div><div class="v">' +
+    html += '<div class="lg-row lg-keyactions"><div class="k"></div><div class="v">' +
       '<button type="button" class="keybtn" id="save-keys">' + t("installSave") +
       '</button> <button type="button" class="keybtn danger" id="reset-app">' +
       t("installReset") + "</button></div></div>";
-    html += '<div class="lg-note">' + t("installNote") + "</div>";
+    html += '<div class="lg-note" style="margin-top:6px">' + t("installKeyHint") + "</div>";
+    if (needsProfile()) {
+      html += '<div class="lg-note">' + t("installNote") + "</div>";
+    }
     $("install-body").innerHTML = html;
     $("install-title").textContent = t("installTitle");
   }
