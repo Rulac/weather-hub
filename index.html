@@ -1,0 +1,2295 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weather Hub">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" sizes="76x76" href="icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<script src="icons.js"></script>
+<meta name="app-version" content="2026-11-20.33">
+<title>Weather Hub</title>
+<style>
+  /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
+     looked like the layout sliding down when a panel was switched. */
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden;
+               position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+               background: #000000; color: #e8eef7;
+               font: 16px/1.35 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+               -webkit-text-size-adjust: 100%; -webkit-user-select: none; }
+  .app { display: -webkit-box; display: -webkit-flex; display: flex;
+         -webkit-flex-direction: column; flex-direction: column; height: 100%;
+         -webkit-box-sizing: border-box; box-sizing: border-box; }
+  /* black-translucent puts the page under the status bar; in kiosk mode the
+     clock, device name and battery would sit on top of the chips. */
+  body.kiosk .app { padding-top: 22px; }
+  body.kiosk .overlay { padding-top: 22px; }
+
+  /* header: place chips + language switch */
+  .top { display: -webkit-flex; display: flex; padding: 10px 14px 0; }
+  .chips { display: -webkit-flex; display: flex; -webkit-flex: 1; flex: 1; }
+  .chip { -webkit-flex: 1 1 0; flex: 1 1 0; min-width: 0; text-align: center;
+          padding: 13px 4px;
+          font-size: 17px; color: #9a9a9a; background: #0e0e0e; border-radius: 9px;
+          margin-right: 7px; border: 1px solid #1c1c1c; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+  .chip.on { background: #1c1c1c; color: #fff; border-color: #4a4a4a; font-weight: 600; }
+  .lang { display: -webkit-flex; display: flex; -webkit-flex: 0 0 auto; flex: 0 0 auto; }
+  .lang button { font: inherit; font-size: 15px; padding: 13px 11px; color: #7f7f7f;
+                 background: #0e0e0e; border: 1px solid #1c1c1c; margin: 0;
+                 text-transform: uppercase; position: relative; }
+  .lang button + button { margin-left: -1px; }
+  .lang button:first-child { border-radius: 9px 0 0 9px; }
+  .lang button:last-child { border-radius: 0 9px 9px 0; }
+  .lang button.on { background: #1c1c1c; color: #fff; border-color: #4a4a4a; z-index: 1; }
+  .refresh { font: inherit; font-size: 19px; line-height: 1; padding: 12px 16px 14px;
+             margin-left: 7px; color: #9a9a9a; background: #0e0e0e;
+             border: 1px solid #1c1c1c; border-radius: 9px; }
+  .refresh.busy { color: #46d17a; }
+  .chip.add { -webkit-flex: 0 0 46px; flex: 0 0 46px; margin-right: 7px;
+              font-size: 22px; line-height: 1; padding: 10px 0 12px; }
+
+  /* place picker */
+  .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000000;
+             display: none; z-index: 20; }
+  .overlay.open { display: -webkit-box; display: -webkit-flex; display: flex;
+                  -webkit-flex-direction: column; flex-direction: column; }
+  .ovhead { display: -webkit-flex; display: flex; padding: 14px; }
+  .ovhead input { -webkit-flex: 1; flex: 1; width: 100%; font: inherit; font-size: 20px;
+                  padding: 12px 14px; background: #0e0e0e; color: #e8eef7;
+                  border: 1px solid #1c1c1c; border-radius: 9px;
+                  -webkit-appearance: none; -webkit-border-radius: 9px; }
+  .ovhead button { font: inherit; font-size: 19px; margin: 0 0 0 8px; padding: 10px 18px;
+                   background: #0e0e0e; color: #9a9a9a; border: 1px solid #1c1c1c;
+                   border-radius: 9px; }
+  .ovlist { -webkit-flex: 1; flex: 1; min-height: 0; overflow-y: auto;
+            -webkit-overflow-scrolling: touch; padding: 0 14px 16px; }
+  .ovrow { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+           padding: 12px 4px 12px 16px; border-bottom: 1px solid #161616; font-size: 20px; }
+  .ovrow.cur { background: #0e0e0e; border-radius: 8px; }
+  .ovname { -webkit-flex: 1; flex: 1; }
+  .ovsub { display: inline-block; padding-left: 10px; color: #666666; font-size: 16px; }
+  .ovstar { font-size: 24px; line-height: 1; color: #3a3a3a; padding: 8px 14px; }
+  .ovdel { font-size: 30px; line-height: 1; color: #8a5252; padding: 6px 22px; }
+  .ovstar.on { color: #ffb020; }
+  .ovempty { padding: 22px 6px; color: #666666; font-size: 18px; }
+
+  .lhead { -webkit-align-items: center; align-items: center; }
+  .ltitle { -webkit-flex: 1; flex: 1; font-size: 21px; font-weight: 600; }
+  .ovbody { -webkit-flex: 1; flex: 1; min-height: 0; overflow-y: auto;
+            -webkit-overflow-scrolling: touch; padding: 0 20px 26px; }
+  .lg-h { font-size: 13px; color: #666666; text-transform: uppercase;
+          letter-spacing: 1px; margin: 20px 0 4px; }
+  .lg-icons { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap;
+              flex-wrap: wrap; }
+  .lg-icons .lg-icon { width: 50%; -webkit-box-sizing: border-box;
+                       box-sizing: border-box; padding-right: 14px; }
+  .lg-icon { display: -webkit-flex; display: flex; -webkit-align-items: center;
+             align-items: center; padding: 8px 0; border-bottom: 1px solid #161616;
+             font-size: 17px; }
+  .lg-icon .ic { width: 34px; height: 34px; margin-right: 14px;
+                 -webkit-flex: 0 0 auto; flex: 0 0 auto; }
+  .lg-names { display: -webkit-flex; display: flex;
+              -webkit-flex-direction: column; flex-direction: column; }
+  .lg-names .hr { font-size: 17px; }
+  .lg-names .en { font-size: 14px; color: #7f7f7f; }
+  .lg-row { display: -webkit-flex; display: flex; padding: 9px 0;
+            border-bottom: 1px solid #161616; font-size: 16px; }
+  .lg-row .k { width: 196px; -webkit-flex: 0 0 196px; flex: 0 0 196px;
+               color: #e8eef7; font-weight: 500; padding-right: 14px; }
+  .lg-row .v { color: #9a9a9a; -webkit-flex: 1; flex: 1; min-width: 0; }
+  .lg-row .v b { color: #e8eef7; font-weight: 600; }
+  .lg-row .v.ok { color: #46d17a; }
+  .lg-row .v.err { color: #ff8a6b; }
+  .foot #foot-left { border-bottom: 1px dotted #3a3a3a; padding: 4px 0; }
+  .lg-row .v a { color: #6bb6ff; text-decoration: none;
+                 word-break: break-all; -webkit-word-break: break-all; }
+  .installbtn { display: block; margin: 10px 0 14px; padding: 20px 16px; text-align: center;
+                background: #1c1c1c; color: #ffffff; text-decoration: none;
+                font-size: 22px; font-weight: 600; border-radius: 12px;
+                border: 1px solid #4a4a4a; }
+  .installbtn:active { background: #262626; }
+  .lg-note { margin-top: 22px; color: #666666; font-size: 14px; line-height: 1.7; }
+  .keyinput { width: 100%; font: inherit; font-size: 16px; padding: 9px 12px;
+              background: #0e0e0e; color: #e8eef7; border: 1px solid #1c1c1c;
+              border-radius: 8px; -webkit-appearance: none;
+              -webkit-box-sizing: border-box; box-sizing: border-box; }
+  .keybtn { font: inherit; font-size: 15px; padding: 10px 18px; margin: 4px 8px 4px 0;
+            background: #0e0e0e; color: #e8eef7; border: 1px solid #2a2a2a;
+            border-radius: 8px; }
+  .keybtn.danger { color: #c98b8b; border-color: #3a2626; }
+
+  /* Percentage heights are unreliable inside flex items on iOS 9; intrinsic
+     sizing with max-width/height keeps the stream centred and letterboxed. */
+
+  /* current conditions */
+  .now { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+         padding: 0 24px; }
+  .now .glyphcol { -webkit-flex: 0 0 126px; flex: 0 0 126px;
+                   display: -webkit-flex; display: flex;
+                   -webkit-flex-direction: column; flex-direction: column;
+                   -webkit-align-items: center; align-items: center; }
+  .now .glyph { font-size: 106px; line-height: 1; width: 126px;
+                text-align: center; }
+  .now .temp { font-size: 88px; font-weight: 200; letter-spacing: -3px; }
+  .now .clock { font-size: 29px; font-weight: 300; letter-spacing: 1px;
+                padding-top: 1px; text-align: center; }
+  .now .temp .unit { font-size: 34px; font-weight: 300; letter-spacing: 0; color: #9a9a9a;
+                     margin-left: 4px; vertical-align: 26px; }
+  .now .meta { margin-left: 24px; line-height: 1.5; display: -webkit-flex; display: flex;
+               -webkit-align-items: flex-end; align-items: flex-end;
+               font-size: 21px; color: #9a9a9a; }
+  /* Block flow, not flex: as a column-flex box every text node and <b> became
+     its own flex item, so "vjetar" and its value ended up on separate lines. */
+  .now .meta .mcol { display: block; }
+  .now .meta .mcol + .mcol { margin-left: 30px; }
+  .now .meta .lbl { color: #7f7f7f; font-size: 17px; }
+  .now .meta .lbl + b { margin-left: 6px; }
+  .now .meta b { color: #e8eef7; font-weight: 500; }
+  .now .meta .cond { color: #e8eef7; font-size: 24px; }
+  .now .meta .sun { font-size: 18px; line-height: 1.55; }
+  .now .place { margin-left: auto; text-align: right; }
+  .now .place .name { font-size: 42px; font-weight: 500; }
+  .now .place .coords { font-size: 15px; color: #666666; line-height: 1.3;
+                        overflow: hidden; text-overflow: ellipsis; }
+
+  /* top-level switch: the forecast (hours, then days) or the comparison */
+  .viewsbar { padding: 0 18px 6px; }
+  .views { -webkit-flex: 1; flex: 1; min-height: 0;
+           display: -webkit-flex; display: flex;
+           -webkit-flex-direction: column; flex-direction: column; }
+
+  /* hourly strip: the next 24 hours, scrolled sideways if the screen is narrow */
+  .forecast { display: none; }
+  .forecast.on { display: -webkit-flex; display: flex; -webkit-flex: 1; flex: 1;
+                 min-height: 0; -webkit-flex-direction: column; flex-direction: column;
+                 -webkit-justify-content: flex-start; justify-content: flex-start;
+                 padding-top: 16px; }
+  .hours { display: -webkit-flex; display: flex; padding: 2px 10px 4px;
+           overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .hour { -webkit-flex: 1 0 38px; flex: 1 0 38px; text-align: center;
+          padding: 3px 0 4px; border-radius: 9px; margin: 0 1px; }
+  .hour.cur { background: #171717; }
+  .hour.mid { border-left: 1px solid #2a2a2a; }
+  .hour .ht { font-size: 16px; color: #9a9a9a; }
+  .hour.cur .ht { color: #ffffff; font-weight: 500; }
+  .hour .hd { font-size: 11px; color: #5a5a5a; height: 15px;
+             white-space: nowrap; overflow: hidden; }
+  .hour .g { font-size: 36px; line-height: 1.16; }
+  .hour .temp { font-size: 21px; font-weight: 500; }
+  .hour .pp { font-size: 11px; color: #6bb6ff; height: 15px; }
+  .hnote { padding: 18px; color: #666666; font-size: 16px; }
+
+  /* daily strip */
+  .strip { display: -webkit-flex; display: flex; padding: 0 10px; }
+  .day { -webkit-flex: 1; flex: 1; text-align: center; padding: 5px 0 3px;
+         border-radius: 10px; margin: 0 2px; }
+  .day.today { background: #171717; }
+  .day.weekend { background: #121212;
+                 -webkit-box-shadow: inset 0 -3px 0 0 #2e2e2e;
+                 box-shadow: inset 0 -3px 0 0 #2e2e2e; }
+  .day.weekend .dn { color: #c9c9c9; font-weight: 600; }
+  .day .dn { font-size: 18px; color: #9a9a9a; }
+  .day .dd { font-size: 15px; color: #5a5a5a; }
+  .day .g { font-size: 42px; line-height: 1.2; }
+  .ic { width: 1em; height: 1em; display: inline-block; vertical-align: middle; }
+  .day .hi { font-size: 27px; font-weight: 500; }
+  .day .lo { font-size: 20px; color: #7f7f7f; padding-top: 1px; }
+  .day .sp { font-size: 14px; color: #ffb020; height: 24px; }
+
+  /* comparison: providers against the clock (hours) and against the calendar
+     (days), both with providers as rows so the two tables read the same way */
+  .rule { height: 0; border: 0; border-top: 1px solid #262626;
+          margin: 13px 0; }
+  .seg { display: -webkit-flex; display: flex; }
+  .seg button { font: inherit; font-size: 15px; padding: 10px 20px; color: #7f7f7f;
+                outline: none; -webkit-tap-highlight-color: transparent;
+                background: #0e0e0e; border: 1px solid #1c1c1c; margin: 0;
+                text-transform: uppercase; letter-spacing: .5px; position: relative; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; }
+  .seg button + button { margin-left: -1px; }
+  .seg button:last-child { border-radius: 0 8px 8px 0; }
+  .seg button.on { background: #1c1c1c; color: #fff; border-color: #4a4a4a; z-index: 1; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 17px; }
+  th, td { text-align: center; padding: 7px 2px; border-bottom: 1px solid #161616; }
+  th { color: #9a9a9a; font-weight: 500; font-size: 15px; }
+  th:first-child { text-align: left; padding-left: 2px; }
+
+  .cmp { display: none; padding: 0 14px; }
+  .cmp.on { display: -webkit-flex; display: flex; -webkit-flex: 1; flex: 1;
+            min-height: 0; -webkit-flex-direction: column; flex-direction: column; }
+  .ctwrap { -webkit-flex: 1; flex: 1; min-height: 0; overflow-y: auto;
+            -webkit-overflow-scrolling: touch; }
+  .mstats { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap;
+            flex-wrap: wrap; -webkit-align-items: baseline; align-items: baseline;
+            font-size: 14px; color: #7f7f7f; margin: 13px 0 0; }
+  .mstats b { color: #e8eef7; font-weight: 600; font-size: 15px; }
+  .mstats .stat { white-space: nowrap; }
+  .mstats .sp { width: 12px; }
+  .mstats .up { color: #ff8a6b; }
+  .mstats .down { color: #6bb6ff; }
+
+  .cmpsec { font-size: 12px; color: #666666; text-transform: uppercase;
+            letter-spacing: 1px; margin: 13px 0 0; }
+  .hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ct { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .ct th, .ct td { padding: 2px 1px; border-bottom: 1px solid #161616;
+                   text-align: center; }
+  .ct th { font-weight: 500; color: #9a9a9a; font-size: 12px; }
+  .ct th:first-child, .ct td.src { text-align: left; width: 74px; }
+  .ct td.src { font-size: 13px; color: #9a9a9a; white-space: nowrap;
+               padding-left: 2px; }
+  .ct td.src.off { color: #4f4f4f; }
+  /* the hourly table carries an icon in every cell, so it runs a size smaller */
+  #hour-table { font-size: 13px; }
+  #hour-table th:first-child, #hour-table td.src { width: 62px; }
+  #hour-table td .ic { width: 15px; height: 15px; margin-right: 0;
+                       vertical-align: -3px; }
+  .ct .hh { display: block; font-size: 12px; color: #9a9a9a; }
+  .ct .dd2 { display: block; font-size: 10px; color: #5a5a5a; line-height: 1.2;
+             min-height: 12px; }
+  .ct th.weekend, .ct td.weekend { background: #121212; }
+  .ct th.cur, .ct td.cur { background: #171717; }
+  .ct td.t { white-space: nowrap; }
+  .ct td .ic { width: 18px; height: 18px; margin-right: 1px;
+               vertical-align: -4px; }
+  .ct .hi { font-weight: 600; }
+  .ct .lo { color: #7f7f7f; }
+  .ct .na { color: #4a4a4a; }
+  .ct tr.spread td { color: #ffb020; font-size: 12px; padding-bottom: 4px; }
+  .ct tr.spread td.src { color: #666666; }
+  .ct tbody tr:last-child td { border-bottom: none; }
+
+  /* night dimming: 22:00-07:00 the whole screen is darkened so the kitchen
+     does not glow into the next room; a tap lifts it for one minute. */
+  #dim { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000;
+         opacity: 0; pointer-events: none; z-index: 40;
+         -webkit-transition: opacity 1.2s ease; transition: opacity 1.2s ease; }
+  #dim.on { opacity: 0.68; }
+  #dim.soft { opacity: 0.1; }
+
+  /* footer */
+  .foot { margin-top: auto; display: -webkit-flex; display: flex;
+          overflow: hidden; white-space: nowrap;
+          -webkit-align-items: center; align-items: center;
+          padding: 3px 18px 2px; font-size: 14px; color: #666666;
+          border-top: 1px solid #262626; }
+  .foottools { margin-left: auto; display: -webkit-flex; display: flex;
+               -webkit-align-items: center; align-items: center; }
+  .foottools #foot-right { margin-right: 16px; }
+  .foottools .lang button { font-size: 12px; padding: 5px 10px; border-radius: 0; }
+  .foottools .lang button:first-child { border-radius: 7px 0 0 7px; }
+  .foottools .lang button:last-child { border-radius: 0 7px 7px 0; }
+  .foottools .refresh { font-size: 15px; line-height: 1; padding: 4px 10px 6px;
+                        margin-left: 7px; }
+  .foot .legend { font: inherit; font-size: 14px; margin-left: 18px; color: #7f7f7f;
+                  background: none; border: none; border-bottom: 1px dotted #3a3a3a;
+                  padding: 6px 0; }
+  .foot .err { color: #ffb020; }
+  /* tapping the version forces a fresh shell; the only way out when the iPad
+     is stuck on an old build. */
+  .foot .ver { color: #7f7f7f; border-bottom: 1px dotted #3a3a3a; padding: 4px 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="now">
+    <div class="glyphcol">
+      <div class="glyph" id="now-glyph">&ndash;</div>
+      <div class="clock" id="clock"></div>
+    </div>
+    <div class="temp" id="now-temp">&ndash;<span class="unit">&deg;C</span></div>
+    <div class="meta" id="now-meta"></div>
+    <div class="place">
+      <div class="name" id="place-name"></div>
+      <div class="coords" id="place-coords"></div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <div class="viewsbar">
+    <div class="seg" id="panel-switch">
+      <button type="button" data-panel="hours"></button>
+      <button type="button" data-panel="compare"></button>
+    </div>
+  </div>
+
+  <div class="views" id="views">
+    <div class="forecast" id="panel-forecast">
+      <div class="hours" id="hours"></div>
+      <hr class="rule">
+      <div class="strip" id="strip"></div>
+    </div>
+
+    <div class="cmp" id="panel-cmp">
+      <div class="mstats" id="month-stats"></div>
+      <div class="ctwrap">
+        <div class="cmpsec" id="cmp-hours-title"></div>
+        <div class="hscroll">
+          <table class="ct" id="hour-table">
+            <thead><tr id="hour-head"></tr></thead>
+            <tbody id="hour-body"></tbody>
+          </table>
+        </div>
+        <div class="cmpsec" id="cmp-days-title"></div>
+        <div class="hscroll">
+          <table class="ct" id="day-table">
+            <thead><tr id="day-head"></tr></thead>
+            <tbody id="day-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div id="foot-left">&ndash;</div>
+    <button type="button" class="legend" id="legend-link">legenda</button>
+    <button type="button" class="legend" id="install-link">instalacija</button>
+    <div class="foottools">
+      <span id="foot-right"></span>
+      <div class="lang" id="lang">
+        <button type="button" data-lang="hr">hr</button>
+        <button type="button" data-lang="en">en</button>
+      </div>
+      <button type="button" class="refresh" id="refresh" title="Refresh">&#8635;</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ovhead">
+    <input id="search" type="text" autocomplete="off" autocorrect="off"
+           autocapitalize="off" spellcheck="false">
+    <button type="button" id="close">&#10005;</button>
+  </div>
+  <div class="ovlist" id="ovlist"></div>
+</div>
+
+<div id="dim"></div>
+
+<div class="overlay" id="logpanel">
+  <div class="ovhead lhead">
+    <div class="ltitle" id="log-title"></div>
+    <button type="button" id="log-close">&#10005;</button>
+  </div>
+  <div class="ovbody" id="log-body"></div>
+</div>
+
+<div class="overlay" id="install">
+  <div class="ovhead lhead">
+    <div class="ltitle" id="install-title"></div>
+    <button type="button" id="install-close">&#10005;</button>
+  </div>
+  <div class="ovbody" id="install-body"></div>
+</div>
+
+</div>
+
+<div class="overlay" id="legend-panel">
+  <div class="ovhead lhead">
+    <div class="ltitle" id="legend-title"></div>
+    <button type="button" id="legend-close">&#10005;</button>
+  </div>
+  <div class="ovbody" id="legend-body"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  if (window.navigator.standalone) document.body.className = "kiosk";
+
+  var STORE_CITY = "wh.city";
+  var STORE_LANG = "wh.lang";
+  var STORE_FAVS = "wh.favs";
+  var STORE_RELOAD = "wh.reload";
+  var STORE_PANEL = "wh.panel";
+  var STORE_CUSTOM = "wh.custom";
+
+  /* Version of the running shell, used to detect a newer index.html. */
+  var APP_VERSION = (function () {
+    var metas = document.getElementsByName ? document.getElementsByName("app-version") : [];
+    return metas && metas[0] && metas[0].content ? metas[0].content : "dev";
+  })();
+
+  var STRINGS = {
+    hr: {
+      lang: "hr",
+      panelCompare: "usporedba",
+      panelHours: "sati i dani",
+      nowLabel: "sada",
+      cmpHours: "po satima",
+      cmpDays: "po danima",
+      spreadRow: "razlika",
+      normalsPeriod: "prosjek {period}",
+      normalsLow: "najni\u017ea",
+      normalsHigh: "najvi\u0161a",
+      normalsPrecip: "oborine",
+      forecastVsNormal: "odstupanje od normale (8 dana)",
+      noNormals: "nema podataka o normama",
+      monthsLong: ["sije\u010danj", "velja\u010da", "o\u017eujak", "travanj", "svibanj", "lipanj",
+                   "srpanj", "kolovoz", "rujan", "listopad", "studeni", "prosinac"],
+      noData: "nema podataka",
+      wind: "vjetar",
+      humidity: "vla\u017enost",
+      sunRise: "izlazak",
+      sunSet: "zalazak",
+      civilLabel: "civilni sumrak",
+      dataLabel: "podaci:",
+      dataFresh: "svje\u017ee",
+      dataAgo: "prije {n} min",
+      dataUnknown: "nepoznato",
+      searchPlaceholder: "Tra\u017ei mjesto\u2026",
+      noMatches: "nema rezultata",
+      addPlace: "Dodaj mjesto iz Open-Metea",
+      loading: "u\u010ditavam\u2026",
+      legend: "legenda",
+      install: "instalacija",
+      installTitle: "Izvori i certifikati",
+      installProfile: "Certifikati",
+      installProfileOpen: "Instaliraj profil",
+      installProfileHint: "Otvara se u Safariju; potvrdi instalaciju i to je sve. Profil dodaje korijene koje iPad 9 nema, pa Open-Meteo postaje dostupan.",
+      installSources: "Linkovi na svaki izvor koji aplikacija koristi",
+      srcDirect: "direktno",
+      srcActions: "iz cachea",
+      tagQuota: "kvota",
+      tagNet: "mre\u017ea",
+      tagHttp: "HTTP",
+      quotaShort: "Open-Meteo kvota potro\u0161ena \u2014 poku\u0161avam za pola sata",
+      logTitle: "Zapisnik",
+      installNote: "Ako neki link vrati gre\u0161ku o certifikatu, tom izvoru nedostaje korijen u iPadu. Profil se instalira preko ra\u010dunala: python3 scripts/serve_profile.py, pa na iPadu otvori prikazanu adresu.",
+      installKeys: "Klju\u010devi (ostaju samo na ovom ure\u0111aju)",
+      installSave: "Spremi i osvje\u017ei",
+      installReset: "Tvorni\u010dke postavke",
+      installResetAsk: "Obrisati sve lokalne podatke, favorite i klju\u010deve?",
+      kiosk: "kiosk",
+      days: ["ned", "pon", "uto", "sri", "\u010det", "pet", "sub"],
+      months: ["sij", "velj", "o\u017eu", "tra", "svi", "lip",
+               "srp", "kol", "ruj", "lis", "stu", "pro"],
+      dateStyle: "day-month",
+      conditions: {
+        0: "Vedro", 1: "Prete\u017eno vedro", 2: "Djelomi\u010dno obla\u010dno",
+        3: "Obla\u010dno", 45: "Magla", 48: "Magla",
+        51: "Rosulja", 53: "Rosulja", 55: "Rosulja",
+        56: "Ledena rosulja", 57: "Ledena rosulja",
+        61: "Ki\u0161a", 63: "Ki\u0161a", 65: "Jaka ki\u0161a",
+        66: "Ledena ki\u0161a", 67: "Ledena ki\u0161a",
+        71: "Snijeg", 73: "Snijeg", 75: "Jak snijeg", 77: "Zrnati snijeg",
+        80: "Pljuskovi", 81: "Pljuskovi", 82: "Jaki pljuskovi",
+        85: "Snje\u017eni pljuskovi", 86: "Snje\u017eni pljuskovi",
+        95: "Grmljavina", 96: "Grmljavina s tu\u010dom", 99: "Grmljavina s tu\u010dom"
+      }
+    },
+    en: {
+      lang: "en",
+      panelCompare: "comparison",
+      panelHours: "hours & days",
+      nowLabel: "now",
+      cmpHours: "by the hour",
+      cmpDays: "by the day",
+      spreadRow: "spread",
+      normalsPeriod: "{period} average",
+      normalsLow: "low",
+      normalsHigh: "high",
+      normalsPrecip: "precipitation",
+      forecastVsNormal: "8-day departure from normal",
+      noNormals: "no normals yet",
+      monthsLong: ["January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"],
+      noData: "no data",
+      wind: "wind",
+      humidity: "humidity",
+      sunRise: "sunrise",
+      sunSet: "sunset",
+      civilLabel: "civil twilight",
+      dataLabel: "data:",
+      dataFresh: "fresh",
+      dataAgo: "{n} min ago",
+      dataUnknown: "unknown",
+      searchPlaceholder: "Search places\u2026",
+      noMatches: "no matches",
+      addPlace: "Add a place from Open-Meteo",
+      loading: "loading\u2026",
+      legend: "legend",
+      install: "install",
+      installTitle: "Sources and certificates",
+      installProfile: "Certificates",
+      installProfileOpen: "Install the profile",
+      installProfileHint: "It opens in Safari; confirm the install and that is all. The profile adds the roots iOS 9 lacks, which is what lets the app reach Open-Meteo.",
+      installSources: "Links to every source the app uses",
+      srcDirect: "direct",
+      srcActions: "from cache",
+      tagQuota: "quota",
+      tagNet: "network",
+      tagHttp: "HTTP",
+      quotaShort: "Open-Meteo quota used up \u2014 retrying in half an hour",
+      logTitle: "Log",
+      installNote: "If a link reports a certificate error, that source\u2019s root is missing on the iPad. The profile is installed from a computer: python3 scripts/serve_profile.py, then open the printed address on the iPad.",
+      installKeys: "Keys (stay on this device only)",
+      installSave: "Save and refresh",
+      installReset: "Factory settings",
+      installResetAsk: "Erase all local data, favourites and keys?",
+      kiosk: "kiosk",
+      days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+      months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      dateStyle: "month-day",
+      conditions: {
+        0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+        45: "Fog", 48: "Fog",
+        51: "Drizzle", 53: "Drizzle", 55: "Drizzle",
+        56: "Freezing drizzle", 57: "Freezing drizzle",
+        61: "Rain", 63: "Rain", 65: "Heavy rain",
+        66: "Freezing rain", 67: "Freezing rain",
+        71: "Snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+        80: "Showers", 81: "Showers", 82: "Heavy showers",
+        85: "Snow showers", 86: "Snow showers",
+        95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with hail"
+      }
+    }
+  };
+
+  var WMO_ICON = {
+    0: "sun", 1: "suncloud", 2: "suncloud", 3: "cloud", 45: "fog", 48: "fog",
+    51: "drizzle", 53: "drizzle", 55: "drizzle", 56: "drizzle", 57: "drizzle",
+    61: "rain", 63: "rain", 65: "rain", 66: "rain", 67: "rain",
+    71: "snow", 73: "snow", 75: "snow", 77: "snow",
+    80: "showers", 81: "showers", 82: "showers",
+    85: "snowshowers", 86: "snowshowers",
+    95: "thunder", 96: "thunder", 99: "thunder"
+  };
+
+  /* Codes whose icon has a sun in it need a moon after dark. Everything else
+     (cloud, rain, snow, fog, thunder) already looks the same at night. */
+  var WMO_NIGHT_ICON = {
+    0: "moon", 1: "mooncloud", 2: "mooncloud",
+    80: "moonshowers", 81: "moonshowers", 82: "moonshowers",
+    85: "moonsnowshowers", 86: "moonsnowshowers"
+  };
+
+
+  var LEGEND = {
+    hr: {
+      title: "Legenda i skra\u0107enice",
+      icons: "Ikone vremena",
+      abbr: "Skra\u0107enice izvora",
+      marks: "Oznake na ekranu",
+      sources: [
+        ["ECMWF", "Europski centar za srednjoro\u010dne prognoze. Model IFS 0,25\u00b0, do <b>15 dana</b> \u2014 glavni izvor za gornji dio ekrana."],
+        ["ICON", "Njema\u010dki meteorolo\u0161ki servis DWD. Do <b>7 dana</b>, pa u traci od 15 dana sudjeluje samo prvi tjedan."],
+        ["GFS", "Ameri\u010dki NOAA/NCEP. Do <b>16 dana</b>."],
+        ["KNMI", "Nizozemski meteorolo\u0161ki institut, model HARMONIE. Kratkoro\u010dno, do <b>5 dana</b>."],
+        ["DMI", "Danski meteorolo\u0161ki institut, HARMONIE. Kratkoro\u010dno, do <b>5 dana</b>."],
+        ["WMO", "Kodovi Svjetske meteorolo\u0161ke organizacije (61 = ki\u0161a, 71 = snijeg) koje pretvaramo u ikone."]
+      ],
+      notes: [
+        ["11\u00b0 / 2\u00b0", "Najvi\u0161a i najni\u017ea dnevna temperatura."],
+        ["\u00b15", "Modeli se ne sla\u017eu: razlika najvi\u0161ih dnevnih me\u0111u svim modelima. Ispod 4 \u00b0C se ne prikazuje."],
+        ["usporedba", "Dvije tablice, jedan redak po izvoru. Gornja uspore\u0111uje sljede\u0107a 24 sata ikonom i temperaturom, donja sve dane s ikonom i najvi\u0161om/najni\u017eom. Zadnji redak je \u00b1 razlika najvi\u0161ih me\u0111u modelima; izvor bez podataka ostaje siv."],
+        ["sati", "Gornja traka pokazuje sljede\u0107a 24 sata: ikonu, temperaturu i, ako je iznad 20 %, vjerojatnost oborine. Ispod nje je traka po danima."],
+        ["no\u0107ne ikone", "Kad je sunce za\u0161lo, vedro je mjesec, a djelomi\u010dno obla\u010dno mjesec s oblakom. Danju su ikone sa suncem."],
+        ["MET Norway", "Norve\u0161ki model (met.no), do <b>10 dana</b>. Dolazi preko Open-Metea, jer iPad 9 ne mo\u017ee do njihovog API-ja."],
+        ["\u00b7", "Taj izvor za taj dan nema podataka \u2014 horizont mu je kra\u0107i (KNMI i DMI ~5 dana, ICON ~7, GFS 16)."],
+        ["prosjek 2020\u20132024", "Klimatolo\u0161ke normale za teku\u0107i mjesec: prosje\u010dna najni\u017ea i najvi\u0161a dnevna te mjese\u010dne oborine."],
+        ["\u00b11,4\u00b0", "Odstupanje sljede\u0107ih 8 dana od normale \u2014 toplije crvenkasto, hladnije plavkasto."],
+        ["podaci: prije 6 min", "Starost podataka. Grade se svakih 10 min, stranica ih dohvati svakih 5."],
+        ["kiosk / preglednik", "Kiosk zna\u010di pokrenuto s ikone, bez adresne trake."],
+        ["no\u0107no zatamnjenje", "Izme\u0111u 22 i 7 sati cijeli je ekran zatamnjen. Dodir ga razvedri na minutu, pa se sam vrati."],
+        ["vikend", "Subota i nedjelja su svjetlije podloge i s donjim obrubom \u2014 dani kad se najvi\u0161e ide van."],
+                ["16 dana", "Najdulji horizont koji ijedan javni model daje po danima. Tablica zato staje na 16, a ne na 30 dana."],
+        ["izlazak / zalazak", "Vremena izlaska i zalaska sunca za odabrano mjesto. Ispod njih civilni sumrak: od zore do sumraka, dok je sunce izme\u0111u 0\u00b0 i 6\u00b0 pod obzorom. Ra\u010duna se na ure\u0111aju."]
+      ],
+      note: "Izvori: Open-Meteo (CC BY 4.0) za ECMWF, ICON, GFS, KNMI, DMI i normale. Meteoblue i Visual Crossing pojavljuju se kad im Actions ima klju\u010d. Ovo nije slu\u017ebena prognoza \u2014 za upozorenja provjeri DHMZ."
+    },
+    en: {
+      title: "Legend and abbreviations",
+      icons: "Weather icons",
+      abbr: "Provider abbreviations",
+      marks: "Symbols on screen",
+      sources: [
+        ["ECMWF", "European Centre for Medium-Range Weather Forecasts. IFS 0.25\u00b0 model, up to <b>15 days</b> \u2014 the main source for the top of the screen."],
+        ["ICON", "German weather service DWD. Up to <b>7 days</b>, so it only covers the first week of the strip."],
+        ["GFS", "US NOAA/NCEP. Up to <b>16 days</b>."],
+        ["KNMI", "Royal Netherlands Meteorological Institute, HARMONIE model. Short range, up to <b>5 days</b>."],
+        ["DMI", "Danish Meteorological Institute, HARMONIE. Short range, up to <b>5 days</b>."],
+        ["WMO", "World Meteorological Organization codes (61 = rain, 71 = snow) that we turn into icons."]
+      ],
+      notes: [
+        ["11\u00b0 / 2\u00b0", "Daily high and low."],
+        ["\u00b15", "Models disagree: the spread of daily highs across every model. Hidden below 4 \u00b0C."],
+        ["comparison", "Two tables, one row per provider. The top one compares the next 24 hours by icon and temperature, the bottom one every day with icon and high/low. The last row is the \u00b1 spread of highs across the models; a provider without data stays grey."],
+        ["hours", "The top strip shows the next 24 hours: icon, temperature and, above 20 %, the chance of precipitation. The daily strip sits below it."],
+        ["night icons", "Once the sun is down, clear is a moon and partly cloudy is a moon behind a cloud. By day the icons carry a sun."],
+        ["MET Norway", "The Norwegian model (met.no), up to <b>10 days</b>. It arrives through Open-Meteo, because iOS 9 cannot reach their API."],
+        ["\u00b7", "That provider has no data for that day \u2014 its horizon is shorter (KNMI and DMI ~5 days, ICON ~7, GFS 16)."],
+        ["2020\u20132024 average", "Climate normals for the running month: average daily low, average daily high and monthly precipitation."],
+        ["\u00b11.4\u00b0", "How the next 8 days compare to the norm \u2014 warmer in red, colder in blue."],
+        ["data: 6 min ago", "Age of the payload. Built every 10 minutes, fetched by the page every 5."],
+        ["kiosk / browser", "Kiosk means launched from the Home Screen icon, without an address bar."],
+        ["night dimming", "Between 22:00 and 07:00 the whole screen is darkened. A tap brightens it for a minute, then it fades back."],
+        ["weekend", "Saturday and Sunday carry a lighter background and a bottom edge \u2014 the days people are out."],
+                ["16 days", "The longest horizon any public model publishes per day. The table stops at 16 rather than 30 for that reason."],
+        ["sunrise / sunset", "Sunrise and sunset for the selected place. Below them, civil twilight: dawn to dusk, while the sun is between 0\u00b0 and 6\u00b0 below the horizon. Computed on the device."]
+      ],
+      note: "Sources: Open-Meteo (CC BY 4.0) for ECMWF, ICON, GFS, KNMI, DMI and the normals. Meteoblue and Visual Crossing appear once the Action has their keys. This is not an official forecast \u2014 check DHMZ for warnings."
+    }
+  };
+
+  var BASE_SOURCES = [
+    ["ecmwf_ifs025", "ECMWF"],
+    ["icon_seamless", "ICON"],
+    ["gfs_seamless", "GFS"],
+    ["knmi_seamless", "KNMI"],
+    ["dmi_seamless", "DMI"],
+    ["met", "MET Norway"]
+  ];
+  var EXTRA_SOURCES = [
+    ["meteoblue", "Meteoblue"],
+    ["visualcrossing", "VC"]
+  ];
+
+  function primaryKey(place) {
+    var order = ["ecmwf_ifs025", "icon_seamless", "gfs_seamless"], i;
+    for (i = 0; i < order.length; i++) {
+      if (place.models && place.models[order[i]]) return order[i];
+    }
+    return null;
+  }
+
+  /* The comparison is now the only place these numbers appear, so it lists
+     every provider, the one driving the forecast included. Meteoblue and
+     Visual Crossing appear once the Action has keys for them. */
+  function sourcesFor(place) {
+    var list = [], i;
+    for (i = 0; i < BASE_SOURCES.length; i++) {
+      /* every provider keeps its column even when it has nothing: a dead source
+         should be visible, not silently missing */
+      list.push(BASE_SOURCES[i]);
+    }
+    for (i = 0; i < EXTRA_SOURCES.length; i++) {
+      if (place.providers && place.providers[EXTRA_SOURCES[i][0]]) {
+        list.push(EXTRA_SOURCES[i]);
+      }
+    }
+    return list;
+  }
+
+  function seriesFor(place, key) {
+    if (key === "met") {
+      var met = metSeries(place);
+      if (met) {
+        return { time: met.time, min: met.min, max: met.max, code: met.codes };
+      }
+      return null;
+    }
+    if (place.models && place.models[key]) return place.models[key];
+    if (place.providers && place.providers[key]) return place.providers[key];
+    return null;
+  }
+
+  var state = { data: null, normals: null, direct: false, cityId: "zagreb", lang: "hr",
+                favs: [], panel: "hours", custom: [] };
+
+  var DEFAULT_FAVS = ["zagreb", "sljeme", "komiza", "krk", "samobor", "motovun", "losinj"];
+
+  /* The starting set is part of the page: nothing has to be built for a fresh
+     install to show something. */
+  var SEED_PLACES = [
+    { id: "zagreb", name: "Zagreb", lat: 45.8150, lon: 15.9819, ele: 120,
+      country: "Hrvatska", admin1: "Grad Zagreb" },
+    { id: "sljeme", name: "Sljeme", lat: 45.9097, lon: 15.9436, ele: 1035,
+      country: "Hrvatska", admin1: "Grad Zagreb" },
+    { id: "komiza", name: "Komi\u017ea", lat: 43.0447, lon: 16.0919, ele: 20,
+      country: "Hrvatska", admin1: "Splitsko-dalmatinska" },
+    { id: "krk", name: "Krk", lat: 45.0258, lon: 14.5753, ele: 20,
+      country: "Hrvatska", admin1: "Primorsko-goranska" },
+    { id: "samobor", name: "Samobor", lat: 45.8031, lon: 15.7119, ele: 160,
+      country: "Hrvatska", admin1: "Zagreba\u010dka" },
+    { id: "motovun", name: "Motovun", lat: 45.3361, lon: 13.8286, ele: 270,
+      country: "Hrvatska", admin1: "Istarska" },
+    { id: "losinj", name: "Mali Lo\u0161inj", lat: 44.5311, lon: 14.4700, ele: 10,
+      country: "Hrvatska", admin1: "Primorsko-goranska" }
+  ];
+
+  function $(id) { return document.getElementById(id); }
+
+  function t(key, vars) {
+    var value = STRINGS[state.lang][key];
+    if (value === undefined) return key;
+    if (vars) {
+      for (var name in vars) {
+        value = value.replace("{" + name + "}", vars[name]);
+      }
+    }
+    return value;
+  }
+
+  function icon(name) { return WH.svg(name); }
+
+  var MET_CODE = {
+    clearsky: 0, fair: 1, partlycloudy: 2, cloudy: 3, fog: 45,
+    lightrain: 61, drizzle: 51, rain: 63, heavyrain: 65,
+    lightrainshowers: 80, rainshowers: 80, heavyrainshowers: 82,
+    sleet: 66, lightsnow: 71, snow: 73, snowshowers: 85,
+    rainandthunder: 95, rainshowersandthunder: 95
+  };
+
+  /* MET arrives as symbol names; the icon helper wants WMO numbers. */
+  function metSeries(place) {
+    var series = place.providers && place.providers.met;
+    if (!series) return null;
+    if (series.codes) return series;
+    var codes = [], i, base;
+    for (i = 0; i < series.symbol.length; i++) {
+      base = series.symbol[i] ? String(series.symbol[i]).split("_")[0] : null;
+      codes.push(base && MET_CODE[base] !== undefined ? MET_CODE[base] : null);
+    }
+    series.codes = codes;
+    return series;
+  }
+
+  function iconForWmo(code, night) {
+    if (night && WMO_NIGHT_ICON[code]) return icon(WMO_NIGHT_ICON[code]);
+    return icon(WMO_ICON[code] || "cloud");
+  }
+
+
+  function conditionText(code) {
+    var table = STRINGS[state.lang].conditions;
+    return table[code] || "";
+  }
+
+  function dayName(index) { return STRINGS[state.lang].days[index]; }
+
+  /* Everything on iOS is WebKit, but the label should match what the user
+     actually opened: Chrome reports CriOS, Firefox FxiOS, and all of them also
+     say "Safari" in the UA, so the order matters. */
+  function browserName() {
+    var ua = navigator.userAgent || "";
+    if (/CriOS/i.test(ua)) return "Chrome";
+    if (/FxiOS/i.test(ua)) return "Firefox";
+    if (/EdgiOS|Edg\//i.test(ua)) return "Edge";
+    if (/OPiOS|OPR\//i.test(ua)) return "Opera";
+    if (/SamsungBrowser/.test(ua)) return "Samsung";
+    if (/Safari/.test(ua)) return "Safari";
+    return navigator.appName || "browser";
+  }
+
+  /* NOAA solar position: minutes of UTC for a given zenith angle. Returns null
+     in the polar cases where the sun never crosses that angle. */
+  function solarMinutes(date, lat, lon, zenith) {
+    var start = new Date(date.getFullYear(), 0, 0);
+    var dayOfYear = Math.floor((date - start) / 86400000);
+    var gamma = 2 * Math.PI / 365 * (dayOfYear - 1 + 0.5);
+    var eqtime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) -
+      0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) -
+      0.040849 * Math.sin(2 * gamma));
+    var decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) -
+      0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) -
+      0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+    var latRad = lat * Math.PI / 180;
+    var cosHourAngle = (Math.cos(zenith * Math.PI / 180) -
+      Math.sin(latRad) * Math.sin(decl)) / (Math.cos(latRad) * Math.cos(decl));
+    if (cosHourAngle > 1 || cosHourAngle < -1) return null;
+    var hourAngle = Math.acos(cosHourAngle) * 180 / Math.PI;
+    return {
+      rise: 720 - 4 * (lon + hourAngle) - eqtime,
+      set: 720 - 4 * (lon - hourAngle) - eqtime
+    };
+  }
+
+  function clockOf(date, minutes) {
+    var stamp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) +
+                         Math.round(minutes) * 60000);
+    var hours = stamp.getHours(), mins = stamp.getMinutes();
+    return (hours < 10 ? "0" : "") + hours + ":" + (mins < 10 ? "0" : "") + mins;
+  }
+
+  /* Sunrise and sunset are minutes of the day; the device clock is in the same
+     zone, so the comparison needs no timezone maths. */
+  function minutesOfDay(date, minutes) {
+    var stamp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) +
+                         Math.round(minutes) * 60000);
+    return stamp.getHours() * 60 + stamp.getMinutes();
+  }
+
+  /* Used when the payload has no is_day, e.g. a cache written by an older
+     version of the page: at least the current icon is never a sun at 23:00. */
+  function isDayNow(place) {
+    var now = new Date();
+    var sun = solarMinutes(now, place.lat, place.lon, 90.833);
+    if (!sun) return true;
+    var mins = now.getHours() * 60 + now.getMinutes();
+    return mins >= minutesOfDay(now, sun.rise) && mins <= minutesOfDay(now, sun.set);
+  }
+
+  function sunBlock(place) {
+    var today = new Date();
+    var sun = solarMinutes(today, place.lat, place.lon, 90.833);
+    var civil = solarMinutes(today, place.lat, place.lon, 96);
+    if (!sun) return "";
+    return '<div class="sun">' +
+      '<span class="lbl">' + t("sunRise") + "</span> <b>" +
+      clockOf(today, sun.rise) + "</b><br>" +
+      '<span class="lbl">' + t("sunSet") + "</span> <b>" +
+      clockOf(today, sun.set) + "</b>" +
+      (civil ? "<br>" + '<span class="lbl">' + t("civilLabel") + "</span> <b>" +
+               clockOf(today, civil.rise) + "\u2013" + clockOf(today, civil.set) +
+               "</b>" : "") +
+      "</div>";
+  }
+
+  function formatDate(date) {
+    var d = date.getDate();
+    var m = STRINGS[state.lang].months[date.getMonth()];
+    if (STRINGS[state.lang].dateStyle === "month-day") return m + " " + d;
+    return d + "." + (date.getMonth() + 1) + ".";
+  }
+
+  function parseIsoDate(iso) {
+    var parts = String(iso).split("-");
+    return new Date(+parts[0], +parts[1] - 1, +parts[2], 12, 0, 0);
+  }
+
+  function round(value) {
+    if (value === null || value === undefined) return "\u2013";
+    return String(Math.round(value));
+  }
+
+  function spread(values) {
+    var low = null, high = null, i, v;
+    for (i = 0; i < values.length; i++) {
+      v = values[i];
+      if (v === null || v === undefined) continue;
+      if (low === null || v < low) low = v;
+      if (high === null || v > high) high = v;
+    }
+    return low === null ? 0 : high - low;
+  }
+
+  function currentPlace() {
+    for (var i = 0; i < state.data.places.length; i++) {
+      if (state.data.places[i].id === state.cityId) return state.data.places[i];
+    }
+    return state.data.places[0];
+  }
+
+  function findPlace(id) {
+    var places = state.data ? state.data.places : [], i;
+    for (i = 0; i < places.length; i++) {
+      if (places[i].id === id) return places[i];
+    }
+    return null;
+  }
+
+  function normalizeText(text) {
+    return String(text).toLowerCase()
+      .replace(/\u010d|\u0107/g, "c")
+      .replace(/\u0161/g, "s")
+      .replace(/\u017e/g, "z")
+      .replace(/\u0111/g, "d");
+  }
+
+  function isFavorite(id) {
+    for (var i = 0; i < state.favs.length; i++) {
+      if (state.favs[i] === id) return true;
+    }
+    return false;
+  }
+
+  function toggleFavorite(id) {
+    var index = -1, i;
+    for (i = 0; i < state.favs.length; i++) {
+      if (state.favs[i] === id) index = i;
+    }
+    if (index >= 0) {
+      state.favs.splice(index, 1);
+    } else {
+      state.favs.push(id);
+    }
+    try {
+      window.localStorage.setItem(STORE_FAVS, JSON.stringify(state.favs));
+    } catch (e) {}
+  }
+
+  function primarySeries(place) {
+    var order = ["ecmwf_ifs025", "icon_seamless", "gfs_seamless"], i, key;
+    if (!place.models) return null;
+    for (i = 0; i < order.length; i++) {
+      if (place.models[order[i]]) return place.models[order[i]];
+    }
+    for (key in place.models) return place.models[key];
+    return null;
+  }
+
+  /* Drop trailing days the primary model has no values for. */
+  function trimSeries(series) {
+    var count = 0, i, field, trimmed = {};
+    for (i = 0; i < series.time.length; i++) {
+      if (series.max[i] !== null && series.max[i] !== undefined) count = i + 1;
+    }
+    trimmed.time = series.time.slice(0, count);
+    for (field in series) {
+      if (field !== "time" && series[field] && series[field].slice) {
+        trimmed[field] = series[field].slice(0, count);
+      }
+    }
+    return trimmed;
+  }
+
+  function renderLanguages() {
+    var buttons = $("lang").getElementsByTagName("button"), i;
+    for (i = 0; i < buttons.length; i++) {
+      buttons[i].className = buttons[i].getAttribute("data-lang") === state.lang ? "on" : "";
+    }
+  }
+
+  function renderChips() {
+    var html = '<div class="chip add" data-action="open">+</div>', i, place;
+    for (i = 0; i < state.favs.length; i++) {
+      place = findPlace(state.favs[i]);
+      if (!place) continue;
+      html += '<div class="chip' + (place.id === state.cityId ? " on" : "") +
+              '" data-id="' + place.id + '">' + place.name + "</div>";
+    }
+    $("chips").innerHTML = html;
+  }
+
+  var geoQuery = "", geoResults = [], geoTimer = null, geoRequest = null;
+
+  function searchGeo(query) {
+    geoQuery = query;
+    geoResults = [];
+    if (geoRequest) { try { geoRequest.abort(); } catch (e) {} geoRequest = null; }
+    if (query.length < 3) { renderOverlay($("search").value); return; }
+
+    var request = new XMLHttpRequest();
+    geoRequest = request;
+    request.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=8&format=json" +
+                 "&language=" + state.lang + "&name=" + encodeURIComponent(query), true);
+    request.timeout = 12000;
+    request.onload = function () {
+      geoRequest = null;
+      if (request.status < 200 || request.status >= 300) return;
+      try {
+        var parsed = JSON.parse(request.responseText);
+        geoResults = [];
+        var found = parsed.results || [], k, local;
+        for (k = 0; k < found.length; k++) {
+          local = null;
+          for (var m = 0; m < state.data.places.length; m++) {
+            if (normalizeText(state.data.places[m].name) === normalizeText(found[k].name)) {
+              local = state.data.places[m];
+              break;
+            }
+          }
+          if (!local) geoResults.push(found[k]);
+        }
+        if (geoQuery === query) renderOverlay($("search").value);
+      } catch (e) {}
+    };
+    request.onerror = request.ontimeout = function () { geoRequest = null; };
+    request.send();
+  }
+
+  function scheduleGeo(query) {
+    if (geoTimer) window.clearTimeout(geoTimer);
+    geoTimer = window.setTimeout(function () { geoTimer = null; searchGeo(query); }, 450);
+  }
+
+  function customPlace(result) {
+    return {
+      id: "geo_" + result.latitude.toFixed(3) + "_" + result.longitude.toFixed(3),
+      name: result.name,
+      lat: result.latitude,
+      lon: result.longitude,
+      ele: Math.round(result.elevation || 0),
+      country: result.country || "",
+      admin1: result.admin1 || "",
+      custom: true,
+      models: {},
+      current: {}
+    };
+  }
+
+  function saveCustom() {
+    try {
+      window.localStorage.setItem(STORE_CUSTOM, JSON.stringify(state.custom));
+    } catch (e) {}
+  }
+
+  function loadCustom() {
+    var raw = null;
+    try { raw = window.localStorage.getItem(STORE_CUSTOM); } catch (e) { return; }
+    if (!raw) return;
+    try {
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.length) state.custom = parsed;
+    } catch (e) {}
+  }
+
+  /* The payload from Pages knows nothing about places the user added, so they
+     are re-attached after every load. */
+  function attachCustom() {
+    var i, place;
+    for (i = 0; i < state.custom.length; i++) {
+      place = state.custom[i];
+      if (!findPlace(place.id)) state.data.places.push(place);
+    }
+  }
+
+  function placeUrl(place) {
+    return "https://api.open-meteo.com/v1/forecast" +
+      "?latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lon.toFixed(4) +
+      "&elevation=" + (place.ele || 0) +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum" +
+      "&hourly=temperature_2m,weather_code,precipitation_probability,is_day" +
+      "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,is_day" +
+      "&forecast_days=16&forecast_hours=36" +
+      "&timezone=Europe%2FZagreb&models=" + MODELS.join(",");
+  }
+
+
+  function getKey(name) {
+    try { return window.localStorage.getItem("wh.key." + name) || ""; } catch (e) { return ""; }
+  }
+
+  function setKey(name, value) {
+    try {
+      if (value) window.localStorage.setItem("wh.key." + name, value);
+      else window.localStorage.removeItem("wh.key." + name);
+    } catch (e) {}
+  }
+
+  function fetchMeteoblue(place, key, done) {
+    var url = "https://my.meteoblue.com/packages/basic-day?lat=" + place.lat.toFixed(4) +
+      "&lon=" + place.lon.toFixed(4) + "&asl=" + (place.ele || 0) +
+      "&forecast_days=14&format=json&apikey=" + encodeURIComponent(key);
+    var request = new XMLHttpRequest();
+    request.open("GET", url, true);
+    request.timeout = 20000;
+    request.onload = function () {
+      if (request.status < 200 || request.status >= 300) { done(false); return; }
+      try {
+        var day = (JSON.parse(request.responseText) || {}).data_day || {};
+        if (!day.time) { done(false); return; }
+        place.providers = place.providers || {};
+        place.providers.meteoblue = { time: day.time, min: day.temperature_min,
+                                      max: day.temperature_max };
+        savePlaceCache(place);
+        done(true);
+      } catch (e) { done(false); }
+    };
+    request.onerror = request.ontimeout = function () { done(false); };
+    request.send();
+  }
+
+  function fetchVisualCrossing(place, key, done) {
+    var url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/timeline/" +
+      place.lat.toFixed(4) + "," + place.lon.toFixed(4) +
+      "?unitGroup=metric&include=days&elements=datetime,tempmax,tempmin" +
+      "&contentType=json&key=" + encodeURIComponent(key);
+    var request = new XMLHttpRequest();
+    request.open("GET", url, true);
+    request.timeout = 20000;
+    request.onload = function () {
+      if (request.status < 200 || request.status >= 300) { done(false); return; }
+      try {
+        var days = (JSON.parse(request.responseText) || {}).days || [];
+        if (!days.length) { done(false); return; }
+        place.providers = place.providers || {};
+        place.providers.visualcrossing = {
+          time: days.map(function (d) { return d.datetime; }),
+          min: days.map(function (d) { return d.tempmin; }),
+          max: days.map(function (d) { return d.tempmax; })
+        };
+        savePlaceCache(place);
+        done(true);
+      } catch (e) { done(false); }
+    };
+    request.onerror = request.ontimeout = function () { done(false); };
+    request.send();
+  }
+
+  /* Both answer with CORS headers, so a key typed on the device is enough and
+     no server has to hold it. */
+  function fetchProviders(place, done) {
+    var meteoblue = getKey("meteoblue"), vc = getKey("visualcrossing");
+    var pending = 0, any = false;
+    function finish(ok) { any = any || ok; pending--; if (pending === 0) done(any); }
+    if (meteoblue) { pending++; fetchMeteoblue(place, meteoblue, finish); }
+    if (vc) { pending++; fetchVisualCrossing(place, vc, finish); }
+    if (!pending) done(false);
+  }
+
+
+  function cacheKey(id) { return "wh.p." + id; }
+
+  function savePlaceCache(place) {
+    try {
+      window.localStorage.setItem(cacheKey(place.id), JSON.stringify({
+        models: place.models, hourly: place.hourly, hourlyModels: place.hourlyModels,
+        current: place.current, fetchedAt: place.fetchedAt,
+        providers: place.providers, at: (new Date()).getTime()
+      }));
+    } catch (e) {}
+  }
+
+  function loadPlaceCache(place) {
+    var raw = null;
+    try { raw = window.localStorage.getItem(cacheKey(place.id)); } catch (e) { return; }
+    if (!raw) return;
+    try {
+      var parsed = JSON.parse(raw);
+      if (parsed.fetchedAt) place.fetchedAt = parsed.fetchedAt;
+      if (parsed.models) place.models = parsed.models;
+      if (parsed.hourly) place.hourly = parsed.hourly;
+      if (parsed.hourlyModels) place.hourlyModels = parsed.hourlyModels;
+      if (parsed.current) place.current = parsed.current;
+      if (parsed.providers) place.providers = parsed.providers;
+    } catch (e) {}
+  }
+
+  var FRESH_MS = 10 * 60 * 1000;
+  var blockedUntil = 0;
+  var lastProblem = "";
+
+  function metDays(data) {
+    var series = (data && data.properties && data.properties.timeseries) || [];
+    var days = {}, order = [], i, entry, stamp, key, temp, symbol, slot;
+    for (i = 0; i < series.length; i++) {
+      entry = series[i];
+      stamp = new Date(entry.time);
+      if (isNaN(stamp.getTime())) continue;
+      key = stamp.getFullYear() + "-" + pad2(stamp.getMonth() + 1) + "-" + pad2(stamp.getDate());
+      if (!days[key]) { days[key] = { min: null, max: null, symbols: {} }; order.push(key); }
+      temp = entry.data && entry.data.instant && entry.data.instant.details
+        ? entry.data.instant.details.air_temperature : null;
+      slot = days[key];
+      if (temp !== null && temp !== undefined) {
+        if (slot.min === null || temp < slot.min) slot.min = temp;
+        if (slot.max === null || temp > slot.max) slot.max = temp;
+      }
+      symbol = (entry.data.next_1_hours && entry.data.next_1_hours.summary &&
+                entry.data.next_1_hours.summary.symbol_code) ||
+               (entry.data.next_6_hours && entry.data.next_6_hours.summary &&
+                entry.data.next_6_hours.summary.symbol_code) || null;
+      if (symbol) slot.symbols[symbol] = (slot.symbols[symbol] || 0) +
+        (stamp.getHours() >= 11 && stamp.getHours() <= 14 ? 3 : 1);
+    }
+    order.sort();
+    var out = { time: order, min: [], max: [], symbol: [] };
+    for (i = 0; i < order.length; i++) {
+      slot = days[order[i]];
+      out.min.push(slot.min === null ? null : Math.round(slot.min * 10) / 10);
+      out.max.push(slot.max === null ? null : Math.round(slot.max * 10) / 10);
+      out.symbol.push(bestSymbol(slot.symbols));
+    }
+    return out.time.length ? out : null;
+  }
+
+  function bestSymbol(symbols) {
+    var best = null, key;
+    for (key in symbols) if (best === null || symbols[key] > symbols[best]) best = key;
+    return best;
+  }
+
+  function pad2(value) { return (value < 10 ? "0" : "") + value; }
+
+  function fetchMet(place, done) {
+    var now = (new Date()).getTime();
+    if (now < blockedUntil) { done(false); return; }
+    var request = new XMLHttpRequest();
+    request.open("GET", "https://api.met.no/weatherapi/locationforecast/2.0/compact" +
+                 "?lat=" + place.lat.toFixed(4) + "&lon=" + place.lon.toFixed(4) +
+                 "&altitude=" + (place.ele || 0), true);
+    request.timeout = 20000;
+    request.onload = function () {
+      if (request.status < 200 || request.status >= 300) { done(false); return; }
+      var met = null;
+      try { met = metDays(JSON.parse(request.responseText)); } catch (e) { met = null; }
+      if (met) {
+        place.providers = place.providers || {};
+        place.providers.met = met;
+        logLine("MET: ok (" + met.time.length + " dana)", "ok");
+        savePlaceCache(place);
+        lastSuccess = (new Date()).getTime();
+        if (state.data) {
+          state.data.generated = (new Date()).toISOString().replace(/\.[0-9]+Z$/, "Z");
+        }
+      }
+      done(!!met);
+    };
+    request.onerror = request.ontimeout = function () {
+      lastProblem = t("tagNet");
+      logLine("MET: mreža / TLS", "err");
+      done(false);
+    };
+    request.send();
+  }
+
+  function fetchPlaceForecast(place, done) {
+    var now = (new Date()).getTime();
+    if (now < blockedUntil) { done(false); return; }
+    if (place.fetchedAt && now - place.fetchedAt < FRESH_MS &&
+        place.hourly && place.hourlyModels) {
+      done(true);
+      return;
+    }
+    var url = placeUrl(place);
+    var request = new XMLHttpRequest();
+    request.open("GET", url, true);
+    request.timeout = 20000;
+    request.onload = function () {
+      if (request.status === 429) {
+        blockedUntil = (new Date()).getTime() + 30 * 60 * 1000;
+        lastProblem = t("tagQuota");
+        logLine("Open-Meteo: 429, dnevna kvota potrošena", "err");
+        done(false);
+        return;
+      }
+      if (request.status < 200 || request.status >= 300) {
+        lastProblem = t("tagHttp") + " " + request.status;
+        logLine("Open-Meteo: HTTP " + request.status, "err");
+        done(false);
+        return;
+      }
+      try {
+        var block = JSON.parse(request.responseText);
+        if (block && block.length) block = block[0];
+        mergeOne(place, block);
+        place.fetchedAt = (new Date()).getTime();
+        lastProblem = "";
+        logLine("Open-Meteo: ok (" + place.name + ")", "ok");
+        savePlaceCache(place);
+        /* The footer must reflect what is on screen, not the payload's age:
+           a place fetched directly is the freshest thing there is. */
+        lastSuccess = (new Date()).getTime();
+        if (state.data) {
+          state.data.generated = (new Date()).toISOString().replace(/\.[0-9]+Z$/, "Z");
+        }
+        done(true);
+      } catch (e) { done(false); }
+    };
+    request.onerror = request.ontimeout = function () { done(false); };
+    request.send();
+  }
+
+  function mergeOne(place, block) {
+    var merged = {}, j, suffix;
+    for (j = 0; j < MODELS.length; j++) {
+      suffix = "_" + MODELS[j];
+      if (!block.daily || !block.daily["temperature_2m_max" + suffix]) continue;
+      merged[MODELS[j]] = {
+        time: block.daily.time,
+        max: block.daily["temperature_2m_max" + suffix],
+        min: block.daily["temperature_2m_min" + suffix],
+        code: block.daily["weather_code" + suffix],
+        precip: block.daily["precipitation_sum" + suffix]
+      };
+    }
+    if (merged[MODELS[0]]) place.models = merged;
+    if (block.current) place.current = block.current;
+    var hourly = parseHourly(block, place);
+    if (hourly) {
+      place.hourly = hourly.primary;
+      place.hourlyModels = hourly.models;
+    }
+  }
+
+  var HOURLY_FIELDS = [["temperature_2m", "temp"], ["weather_code", "code"],
+                       ["precipitation_probability", "precip"], ["is_day", "day"]];
+
+  /* Hourly values come back suffixed per model. The forecast strip needs one
+     line, the hourly comparison needs every model, so keep both; they share
+     the single time axis of the response. */
+  function parseHourly(block, place) {
+    var data = block && block.hourly, models = {}, keys = [], i, j, key, slot, values;
+    if (!data || !data.time) return null;
+    for (i = 0; i < MODELS.length; i++) {
+      key = MODELS[i];
+      slot = {};
+      for (j = 0; j < HOURLY_FIELDS.length; j++) {
+        values = data[HOURLY_FIELDS[j][0] + "_" + key];
+        if (!values) { slot = null; break; }
+        slot[HOURLY_FIELDS[j][1]] = values;
+      }
+      if (slot) models[key] = slot;
+    }
+    key = primaryKey(place);
+    if (key) keys.push(key);
+    for (i = 0; i < MODELS.length; i++) {
+      if (keys.indexOf(MODELS[i]) < 0) keys.push(MODELS[i]);
+    }
+    var primary = null;
+    for (i = 0; i < keys.length; i++) {
+      if (models[keys[i]]) { primary = keys[i]; break; }
+    }
+    if (!primary) return null;
+    return {
+      primary: { time: data.time, temp: models[primary].temp,
+                 code: models[primary].code, precip: models[primary].precip,
+                 day: models[primary].day },
+      models: models
+    };
+  }
+
+  /* Two ways out of a search result: the star puts it on the strip and leaves
+     the screen alone, the arrow shows it without touching favourites. */
+  function addPlace(result, asFavourite) {
+    var place = customPlace(result);
+    var existing = findPlace(place.id), fresh = false;
+
+    if (existing) {
+      place = existing;
+    } else {
+      state.data.places.push(place);
+      state.custom.push(place);
+      saveCustom();
+      fresh = true;
+    }
+
+    if (asFavourite) {
+      if (!isFavorite(place.id)) toggleFavorite(place.id);
+      render();
+      if (fresh) {
+        fetchPlaceForecast(place, function () { saveCustom(); render(); });
+      }
+      renderOverlay($("search").value);
+      return;
+    }
+
+    state.cityId = place.id;
+    try { window.localStorage.setItem(STORE_CITY, place.id); } catch (e) {}
+    render();
+    closeOverlay();
+    if (fresh) {
+      fetchPlaceForecast(place, function () { saveCustom(); render(); });
+    } else {
+      fetchPlaceForecast(place, function (ok) { if (ok) render(); });
+    }
+  }
+
+  function removeCustomPlace(id) {
+    var i;
+    for (i = state.data.places.length - 1; i >= 0; i--) {
+      if (state.data.places[i].id === id) state.data.places.splice(i, 1);
+    }
+    for (i = state.custom.length - 1; i >= 0; i--) {
+      if (state.custom[i].id === id) state.custom.splice(i, 1);
+    }
+    for (i = state.favs.length - 1; i >= 0; i--) {
+      if (state.favs[i] === id) state.favs.splice(i, 1);
+    }
+    if (state.cityId === id) {
+      state.cityId = state.favs[0] ||
+        (state.data.places[0] ? state.data.places[0].id : "zagreb");
+    }
+    try {
+      window.localStorage.removeItem(cacheKey(id));
+      window.localStorage.setItem(STORE_FAVS, JSON.stringify(state.favs));
+      window.localStorage.setItem(STORE_CITY, state.cityId);
+    } catch (e) {}
+    saveCustom();
+    render();
+  }
+
+  function renderOverlay(filter) {
+    var html = "", i, place, favorite;
+    var query = normalizeText(filter || "");
+    var places = (state.data ? state.data.places : []).slice(0);
+    places.sort(function (a, b) {
+      return normalizeText(a.name) < normalizeText(b.name) ? -1 : 1;
+    });
+    for (i = 0; i < places.length; i++) {
+      place = places[i];
+      if (query && normalizeText(place.name).indexOf(query) < 0) continue;
+      favorite = isFavorite(place.id);
+      html += '<div class="ovrow' + (place.id === state.cityId ? " cur" : "") + '">' +
+        '<span class="ovname" data-select="' + place.id + '">' + place.name + "</span>" +
+        (place.custom
+          ? '<span class="ovdel" data-del="' + place.id + '">\u00d7</span>'
+          : "") +
+        '<span class="ovstar' + (favorite ? " on" : "") + '" data-star="' + place.id + '">' +
+        (favorite ? "\u2605" : "\u2606") + "</span></div>";
+    }
+    if (geoResults.length) {
+      html += '<div class="lg-h">' + t("addPlace") + "</div>";
+      for (i = 0; i < geoResults.length; i++) {
+        var geo = geoResults[i];
+        var where = [geo.admin1, geo.country].filter(function (x) { return !!x; }).join(", ");
+        html += '<div class="ovrow"><span class="ovname" data-add="' + i + '">' + geo.name +
+          '<span class="ovsub">\u2014 ' + where + "</span></span>" +
+          '<span class="ovstar" data-fav="' + i + '">\u2606</span>' +
+          '<span class="ovstar" data-add="' + i + '">\u203a</span></div>';
+      }
+    }
+    $("ovlist").innerHTML = html || '<div class="ovempty">' + t("noMatches") + "</div>";
+  }
+
+  function openOverlay() {
+    $("search").value = "";
+    $("search").placeholder = t("searchPlaceholder");
+    renderOverlay("");
+    $("overlay").className = "overlay open";
+    $("search").focus();
+  }
+
+  function closeOverlay() {
+    $("overlay").className = "overlay";
+  }
+
+  var SOURCE_LINKS = [
+    ["Open-Meteo \u2014 prognoza",
+     "https://api.open-meteo.com/v1/forecast?latitude=45.81&longitude=15.98&daily=temperature_2m_max"],
+    ["Open-Meteo \u2014 arhiva (normale)",
+     "https://archive-api.open-meteo.com/v1/archive?latitude=45.81&longitude=15.98&start_date=2020-01-01&end_date=2020-01-31&daily=temperature_2m_max"],
+    ["GitHub Pages \u2014 normals.json",
+     "https://rulac.github.io/weather-hub/normals.json"]
+  ];
+
+  var logLines = [];
+
+  function timeNow() {
+    var d = new Date();
+    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) +
+      ":" + ("0" + d.getSeconds()).slice(-2);
+  }
+
+  function logLine(text, level) {
+    logLines.unshift({ at: timeNow(), text: text, level: level || "info" });
+    if (logLines.length > 60) logLines.length = 60;
+  }
+
+  function renderLog() {
+    var html = "", i;
+    if (!logLines.length) html = '<div class="lg-note">nema zapisa</div>';
+    for (i = 0; i < logLines.length; i++) {
+      html += '<div class="lg-row"><div class="k">' + logLines[i].at + "</div>" +
+        '<div class="v ' + logLines[i].level + '">' + logLines[i].text + "</div></div>";
+    }
+    $("log-body").innerHTML = html;
+  }
+
+  function openLog() {
+    $("log-title").textContent = t("logTitle");
+    renderLog();
+    $("logpanel").className = "overlay open";
+  }
+
+  /* One short word in the footer, the whole story in the log. */
+  function statusTag() {
+    if ((new Date()).getTime() < blockedUntil) return t("tagQuota");
+    if (lastProblem) return lastProblem;
+    return "";
+  }
+
+  function renderInstall() {
+    var html = '<div class="lg-h">' + t("installProfile") + "</div>";
+    html += '<a class="installbtn" href="https://rulac.github.io/weather-hub/trust.mobileconfig">' +
+      t("installProfileOpen") + "</a>";
+    html += '<div class="lg-note" style="margin-top:8px">' + t("installProfileHint") + "</div>";
+    html += '<div class="lg-h">' + t("installSources") + "</div>";
+    var i;
+    for (i = 0; i < SOURCE_LINKS.length; i++) {
+      html += '<div class="lg-row"><div class="k">' + SOURCE_LINKS[i][0] +
+        '</div><div class="v"><a href="' + SOURCE_LINKS[i][1] + '">' +
+        SOURCE_LINKS[i][1].replace(/^https:\/\//, "") + "</a></div></div>";
+    }
+    html += '<div class="lg-h">' + t("installKeys") + "</div>";
+    html += '<div class="lg-row"><div class="k">Meteoblue</div>' +
+      '<div class="v"><input class="keyinput" id="key-meteoblue" type="text" ' +
+      'autocapitalize="off" autocorrect="off" spellcheck="false" value="' +
+      getKey("meteoblue") + '"></div></div>';
+    html += '<div class="lg-row"><div class="k">Visual Crossing</div>' +
+      '<div class="v"><input class="keyinput" id="key-visualcrossing" type="text" ' +
+      'autocapitalize="off" autocorrect="off" spellcheck="false" value="' +
+      getKey("visualcrossing") + '"></div></div>';
+    html += '<div class="lg-row"><div class="k"></div><div class="v">' +
+      '<button type="button" class="keybtn" id="save-keys">' + t("installSave") +
+      '</button> <button type="button" class="keybtn danger" id="reset-app">' +
+      t("installReset") + "</button></div></div>";
+    html += '<div class="lg-note">' + t("installNote") + "</div>";
+    $("install-body").innerHTML = html;
+    $("install-title").textContent = t("installTitle");
+  }
+
+  /* Every popup has a hash, so opening a link in Safari and coming back lands
+     on the same panel instead of the bare forecast. */
+  function closeAllPanels() {
+    $("overlay").className = "overlay";
+    $("legend-panel").className = "overlay";
+    $("install").className = "overlay";
+  }
+
+  function applyHash() {
+    var name = (window.location.hash || "").replace(/^#/, "");
+    closeAllPanels();
+    if (name === "legenda") {
+      renderLegend();
+      $("legend-body").scrollTop = 0;
+      $("legend-panel").className = "overlay open";
+    } else if (name === "instalacija") {
+      renderInstall();
+      $("install-body").scrollTop = 0;
+      $("install").className = "overlay open";
+    } else if (name === "mjesta") {
+      openOverlay();
+    }
+  }
+
+  function go(name) {
+    if ((window.location.hash || "").replace(/^#/, "") === name) {
+      applyHash();
+      return;
+    }
+    window.location.hash = name || "";
+  }
+
+  function renderLegend() {
+    var legend = LEGEND[state.lang], html = "", i, name;
+    html += '<div class="lg-h">' + legend.icons + "</div><div class=\"lg-icons\">";
+    for (i = 0; i < WH.order.length; i++) {
+      name = WH.order[i];
+      html += '<div class="lg-icon">' + WH.svg(name) +
+        '<span class="lg-names"><span class="hr">' + WH.names[name].hr +
+        '</span><span class="en">' + WH.names[name].en + "</span></span></div>";
+    }
+    html += "</div>";
+    html += '<div class="lg-h">' + legend.abbr + "</div>";
+    for (i = 0; i < legend.sources.length; i++) {
+      html += '<div class="lg-row"><div class="k">' + legend.sources[i][0] +
+        '</div><div class="v">' + legend.sources[i][1] + "</div></div>";
+    }
+    html += '<div class="lg-h">' + legend.marks + "</div>";
+    for (i = 0; i < legend.notes.length; i++) {
+      html += '<div class="lg-row"><div class="k">' + legend.notes[i][0] +
+        '</div><div class="v">' + legend.notes[i][1] + "</div></div>";
+    }
+    html += '<div class="lg-note">' + legend.note + "</div>";
+    $("legend-body").innerHTML = html;
+    $("legend-title").textContent = legend.title;
+  }
+
+  function placeLabel(place) {
+    var parts = [];
+    if (place.country) parts.push(place.country);
+    if (place.admin1 && place.admin1 !== place.country) parts.push(place.admin1);
+    if (parts.length) return parts.join(" \u00b7 ");
+    return place.lat.toFixed(2) + "\u00b0, " + place.lon.toFixed(2) + "\u00b0";
+  }
+
+  function renderCurrent(place) {
+    var current = place.current || {};
+    var series = primarySeries(place);
+    var night = current.is_day === 0 ||
+      (current.is_day === undefined && !isDayNow(place));
+    $("now-glyph").innerHTML = iconForWmo(current.weather_code, night);
+    $("now-temp").innerHTML = round(current.temperature_2m) +
+      '<span class="unit">\u00b0C</span>';
+    $("now-meta").innerHTML =
+      '<div class="mcol">' +
+        '<div class="cond">' + conditionText(current.weather_code) + "</div>" +
+        t("wind") + " <b>" + round(current.wind_speed_10m) + " km/h</b><br>" +
+        t("humidity") + " <b>" + round(current.relative_humidity_2m) + " %</b>" +
+      "</div>" +
+      '<div class="mcol">' + sunBlock(place) + "</div>";
+    $("place-name").textContent = place.name;
+    $("place-coords").textContent = placeLabel(place);
+    return series ? trimSeries(series) : null;
+  }
+
+  /* The next 24 hours, from the current one. The point of the screen is what
+     the hours ahead look like, so this sits above the daily strip. */
+  function renderHours(place) {
+    var hourly = place.hourly, html = "", i, stamp, date, hour, night, shown = 0;
+    if (!hourly || !hourly.time || !hourly.time.length) {
+      $("hours").innerHTML = '<div class="hnote">' + t("noData") + "</div>";
+      return;
+    }
+    var at = hourStartIndex(hourly.time);
+    /* A cache from yesterday would otherwise show a day of hours that have
+       already happened; better an empty line until the refresh lands. */
+    if (at.index < 0) {
+      $("hours").innerHTML = '<div class="hnote">' + t("noData") + "</div>";
+      return;
+    }
+    var start = at.index;
+    for (i = start; i < hourly.time.length && shown < 24; i++, shown++) {
+      stamp = hourly.time[i];
+      hour = +stamp.slice(11, 13);
+      date = parseIsoDate(stamp.slice(0, 10));
+      night = hourly.day ? hourly.day[i] === 0 : false;
+      var isNow = i === start && stamp === at.key;
+      var mm = hourly.precip ? hourly.precip[i] : null;
+      html += '<div class="hour' + (isNow ? " cur" : "") +
+        (hour === 0 ? " mid" : "") + '">' +
+        '<div class="ht">' + (isNow ? t("nowLabel") : hourLabel(hour)) + "</div>" +
+        '<div class="hd">' + (hour === 0 ? dayName(date.getDay()) : "") + "</div>" +
+        '<div class="g">' + iconForWmo(hourly.code ? hourly.code[i] : null, night) + "</div>" +
+        '<div class="temp">' + round(hourly.temp[i]) + "\u00b0</div>" +
+        '<div class="pp">' + (mm !== null && mm !== undefined && mm >= 20 ? mm + "%" : "") +
+        "</div></div>";
+    }
+    $("hours").innerHTML = html;
+  }
+
+  /* First hour that has not passed yet, and the key it was matched against. */
+  function hourStartIndex(times) {
+    var now = new Date();
+    var nowKey = now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" +
+      pad2(now.getDate()) + "T" + pad2(now.getHours()) + ":00";
+    for (var i = 0; i < times.length; i++) {
+      if (times[i] >= nowKey) return { index: i, key: nowKey };
+    }
+    return { index: -1, key: nowKey };
+  }
+
+  function hourLabel(hour) {
+    return (hour < 10 ? "0" : "") + hour + "h";
+  }
+
+  function renderStrip(place, series) {
+    var html = "", i, date, values, deviation;
+    if (!series) { $("strip").innerHTML = '<div class="day">' + t("noData") + "</div>"; return; }
+    for (i = 0; i < series.time.length; i++) {
+      date = parseIsoDate(series.time[i]);
+      values = [];
+      for (var key in (place.models || {})) values.push(place.models[key].max[i]);
+      deviation = spread(values);
+      var weekend = date.getDay() === 0 || date.getDay() === 6;
+      html += '<div class="day' + (i === 0 ? " today" : "") +
+        (weekend ? " weekend" : "") + '">' +
+        '<div class="dn">' + dayName(date.getDay()) + "</div>" +
+        '<div class="dd">' + formatDate(date) + "</div>" +
+        '<div class="g">' + iconForWmo(series.code ? series.code[i] : null) + "</div>" +
+        '<div class="hi">' + round(series.max[i]) + "\u00b0</div>" +
+        '<div class="lo">' + round(series.min[i]) + "\u00b0</div>" +
+        '<div class="sp">' + (deviation >= 4 ? "\u00b1" + Math.round(deviation) : "") + "</div>" +
+        "</div>";
+    }
+    $("strip").innerHTML = html;
+  }
+
+
+  /* All of it in two tables, read the same way: one line per provider, hours
+     across for the next day, days across for the whole horizon. */
+  function renderCompare(place, series) {
+    $("cmp-hours-title").textContent = t("cmpHours");
+    $("cmp-days-title").textContent = t("cmpDays");
+    renderHourCompare(place);
+    renderDayCompare(place, series);
+  }
+
+  function hourlyRows(place) {
+    var rows = [], models = place.hourlyModels || {}, key, i;
+    for (i = 0; i < BASE_SOURCES.length; i++) {
+      key = BASE_SOURCES[i][0];
+      if (models[key]) {
+        rows.push([BASE_SOURCES[i][1], models[key]]);
+      } else if (!place.hourlyModels && place.hourly && key === primaryKey(place)) {
+        /* a cache from before the hourly comparison: one line is better than none */
+        rows.push([BASE_SOURCES[i][1], place.hourly]);
+      }
+    }
+    return rows;
+  }
+
+  function renderHourCompare(place) {
+    var axis = place.hourly ? place.hourly.time : null;
+    var rows = hourlyRows(place), head = "<th></th>", body = "", hours = 24;
+    var at = axis ? hourStartIndex(axis) : { index: -1 };
+    var i, j, date, hour, cls, value, night;
+    if (!axis || at.index < 0) {
+      $("hour-head").innerHTML = head;
+      $("hour-body").innerHTML =
+        '<tr><td class="src">' + t("noData") + "</td></tr>";
+      return;
+    }
+    for (i = at.index; i < axis.length && i < at.index + hours; i++) {
+      hour = +axis[i].slice(11, 13);
+      date = parseIsoDate(axis[i].slice(0, 10));
+      head += "<th" + (i === at.index ? ' class="cur"' :
+        (hour === 0 ? ' class="weekend"' : "")) + ">" +
+        '<span class="hh">' + hourLabel(hour) + "</span>" +
+        '<span class="dd2">' + (hour === 0 ? dayName(date.getDay()) : "") +
+        "</span></th>";
+    }
+    $("hour-head").innerHTML = head;
+
+    for (j = 0; j < rows.length; j++) {
+      body += '<tr><td class="src">' + rows[j][0] + "</td>";
+      for (i = at.index; i < axis.length && i < at.index + hours; i++) {
+        hour = +axis[i].slice(11, 13);
+        cls = i === at.index ? ' class="cur"' : (hour === 0 ? ' class="weekend"' : "");
+        value = rows[j][1].temp ? rows[j][1].temp[i] : null;
+        night = rows[j][1].day ? rows[j][1].day[i] === 0 : false;
+        body += "<td" + cls + ">" +
+          (value === null || value === undefined
+            ? '<span class="na">\u00b7</span>'
+            : iconForWmo(rows[j][1].code ? rows[j][1].code[i] : null, night) +
+              round(value) + "\u00b0") + "</td>";
+      }
+      body += "</tr>";
+    }
+    $("hour-body").innerHTML = body;
+  }
+
+  /* A provider that answered keeps its row; a dead one is dimmed but stays,
+     so a broken source is visible instead of silently missing. */
+  function renderDayCompare(place, series) {
+    var sources = sourcesFor(place);
+    var head = "<th></th>", body = "", i, j, date, provider, hi, lo, weekend;
+    var weekends = [], highs, deviation;
+    if (!series) {
+      $("day-head").innerHTML = head;
+      $("day-body").innerHTML = "";
+      return;
+    }
+    for (i = 0; i < series.time.length; i++) {
+      date = parseIsoDate(series.time[i]);
+      weekends.push(date.getDay() === 0 || date.getDay() === 6);
+      head += "<th" + (weekends[i] ? ' class="weekend"' : "") + ">" +
+        '<span class="hh">' + dayName(date.getDay()) + "</span>" +
+        '<span class="dd2">' + formatDate(date) + "</span></th>";
+    }
+    $("day-head").innerHTML = head;
+
+    for (j = 0; j < sources.length; j++) {
+      provider = seriesFor(place, sources[j][0]);
+      body += '<tr><td class="src' + (provider ? "" : " off") + '">' +
+        sources[j][1] + "</td>";
+      for (i = 0; i < series.time.length; i++) {
+        hi = provider && i < provider.max.length ? provider.max[i] : null;
+        lo = provider && i < provider.min.length ? provider.min[i] : null;
+        body += "<td" + (weekends[i] ? ' class="weekend"' : "") + ">" +
+          (hi === null
+            ? '<span class="na">\u00b7</span>'
+            : iconForWmo(provider.code ? provider.code[i] : null) +
+              '<span class="hi">' + round(hi) + "\u00b0</span>" +
+              '<span class="lo">/' + round(lo) + "\u00b0</span>") +
+          "</td>";
+      }
+      body += "</tr>";
+    }
+
+    body += '<tr class="spread"><td class="src">' + t("spreadRow") + "</td>";
+    for (i = 0; i < series.time.length; i++) {
+      highs = [];
+      for (j = 0; j < sources.length; j++) {
+        provider = seriesFor(place, sources[j][0]);
+        highs.push(provider && i < provider.max.length ? provider.max[i] : null);
+      }
+      deviation = spread(highs);
+      body += "<td>" +
+        (deviation >= 4 ? "\u00b1" + Math.round(deviation) : "") + "</td>";
+    }
+    body += "</tr>";
+    $("day-body").innerHTML = body;
+  }
+
+  /* Monthly normals as a reference line above the table: the forecast read
+     against what this month usually looks like. */
+  function renderStats(place, series) {
+    var normals = state.normals && state.normals.places ? state.normals.places[place.id] : null;
+    var month = (new Date()).getMonth();
+
+    if (!normals) {
+      $("month-stats").innerHTML = '<span class="lo">' + t("noNormals") + "</span>";
+      return;
+    }
+    var delta = null, sum = 0, count = 0, k;
+    if (series) {
+      for (k = 0; k < 8 && k < series.max.length; k++) {
+        if (series.max[k] !== null && series.max[k] !== undefined) {
+          sum += series.max[k];
+          count++;
+        }
+      }
+      if (count) delta = sum / count - normals.tmax[month];
+    }
+    $("month-stats").innerHTML =
+      "<b>" + t("monthsLong")[month] + "</b>" +
+      '<span class="sp"></span>' +
+      "<span>" + t("normalsPeriod", { period: state.normals.period }) + ":</span>" +
+      '<span class="sp"></span>' +
+      '<span class="stat"><span class="k">' + t("normalsLow") + "</span> <b>" +
+      round(normals.tmin[month]) + "\u00b0</b></span>" +
+      '<span class="sp"></span>' +
+      '<span class="stat"><span class="k">' + t("normalsHigh") + "</span> <b>" +
+      round(normals.tmax[month]) + "\u00b0</b></span>" +
+      '<span class="sp"></span>' +
+      '<span class="stat"><span class="k">' + t("normalsPrecip") + "</span> <b>" +
+      round(normals.precip[month]) + " mm</b></span>" +
+      (delta === null ? "" :
+        '<span class="sp"></span>' +
+        '<span class="stat"><span class="k">' + t("forecastVsNormal") + "</span> " +
+        '<b class="' + (delta >= 0 ? "up" : "down") + '">' +
+        (delta >= 0 ? "+" : "\u2212") + Math.abs(delta).toFixed(1) +
+        "\u00b0</b></span>");
+  }
+
+  function renderPanels() {
+    var showCompare = state.panel === "compare";
+    $("panel-forecast").className = "forecast" + (showCompare ? "" : " on");
+    $("panel-cmp").className = "cmp" + (showCompare ? " on" : "");
+    var buttons = $("panel-switch").getElementsByTagName("button"), i, value;
+    for (i = 0; i < buttons.length; i++) {
+      value = buttons[i].getAttribute("data-panel");
+      buttons[i].className = value === (showCompare ? "compare" : "hours") ? "on" : "";
+      buttons[i].textContent = value === "compare" ? t("panelCompare") : t("panelHours");
+    }
+  }
+
+  function renderFooter() {
+    var generated = state.data.generated ? Date.parse(state.data.generated) : 0;
+    var age = generated ? Math.round((Date.now() - generated) / 60000) : -1;
+    var label;
+    if (age < 0) label = t("dataUnknown");
+    else if (age < 1) label = t("dataFresh");
+    else label = t("dataAgo", { n: age });
+    var tag = statusTag();
+    $("foot-left").textContent = t("dataLabel") + " " + label + (tag ? " \u00b7 " + tag : "");
+
+    var errors = state.data.errors && state.data.errors.length
+      ? state.data.errors.join(" \u00b7 ") : "";
+    $("legend-link").textContent = t("legend");
+    $("install-link").textContent = t("install");
+    $("foot-right").innerHTML =
+      (errors ? '<span class="err">' + errors + "</span> \u00b7 " : "") +
+      (window.navigator.standalone ? t("kiosk") : browserName()) +
+      " \u00b7 " + window.innerWidth + "\u00d7" + window.innerHeight +
+      " \u00b7 " + (state.direct ? t("srcDirect") : t("srcActions")) +
+      ' \u00b7 <span class="ver">v' + APP_VERSION.replace(/^.*\./, "") + "</span>";
+  }
+
+  function renderClock() {
+    var now = new Date();
+    $("clock").textContent = pad2(now.getHours()) + ":" + pad2(now.getMinutes());
+  }
+
+  function render() {
+    var place = currentPlace();
+    document.documentElement.lang = state.lang;
+    renderLanguages();
+    renderChips();
+    var series = renderCurrent(place);
+    /* If the primary model has nothing, fall back to whatever provider did
+       answer, so one working source still fills the screen. */
+    if (!series) series = seriesFor(place, "met");
+    renderHours(place);
+    renderStrip(place, series);
+    renderCompare(place, series);
+    renderStats(place, series);
+    renderPanels();
+    renderFooter();
+  }
+
+  var NIGHT_START = 22;
+  var NIGHT_END = 7;
+  var AWAKE_MS = 60 * 1000;
+
+  var awakeUntil = 0;
+  var dimTimer = null;
+
+  function isNightTime() {
+    var hour = (new Date()).getHours();
+    return hour >= NIGHT_START || hour < NIGHT_END;
+  }
+
+  function applyDim() {
+    var layer = $("dim");
+    if (!isNightTime()) {
+      layer.className = "";
+      return;
+    }
+    layer.className = (new Date()).getTime() < awakeUntil ? "soft" : "on";
+  }
+
+  function wakeScreen() {
+    if (!isNightTime()) return;
+    awakeUntil = (new Date()).getTime() + AWAKE_MS;
+    applyDim();
+    if (dimTimer) window.clearTimeout(dimTimer);
+    dimTimer = window.setTimeout(applyDim, AWAKE_MS + 80);
+  }
+
+  var retryDelay = 3000;
+  var retryTimer = null;
+  var lastSuccess = 0;
+  var versionChecked = false;
+
+  function scheduleRetry() {
+    if (retryTimer) return;
+    retryTimer = window.setTimeout(function () {
+      retryTimer = null;
+      refresh();
+    }, retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 60000);
+  }
+
+  var MODELS = ["ecmwf_ifs025", "icon_seamless", "gfs_seamless",
+                "knmi_seamless", "dmi_seamless"];
+  var MODEL_LABELS = {
+    ecmwf_ifs025: "ECMWF", icon_seamless: "ICON", gfs_seamless: "GFS",
+    knmi_seamless: "KNMI", dmi_seamless: "DMI"
+  };
+
+  /* Each provider is asked separately: a slow or dead one must not hold back
+     the numbers that did arrive. */
+  function refresh() {
+    if (!state.data || !state.data.places) { bootstrap(); return; }
+    var place = currentPlace();
+    var pending = 3;
+
+    function arrived(ok) {
+      pending--;
+      if (ok) render();
+      if (pending === 0 && !ok) scheduleRetry();
+    }
+
+    fetchPlaceForecast(place, function (ok) {
+      if (ok) { state.direct = true; lastSuccess = (new Date()).getTime(); retryDelay = 3000; }
+      arrived(ok);
+    });
+    fetchMet(place, arrived);
+    fetchProviders(place, arrived);
+  }
+
+  function loadNormals() {
+    var request = new XMLHttpRequest();
+    request.open("GET", "normals.json", true);
+    request.timeout = 20000;
+    request.onload = function () {
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          state.normals = JSON.parse(request.responseText);
+          if (state.data) render();
+        } catch (e) {}
+      }
+    };
+    request.send();
+  }
+
+  function seedPlaces() {
+    var places = [], i, place;
+    for (i = 0; i < SEED_PLACES.length; i++) {
+      place = SEED_PLACES[i];
+      places.push({
+        id: place.id, name: place.name, lat: place.lat, lon: place.lon,
+        ele: place.ele, country: place.country, admin1: place.admin1,
+        models: {}, current: {}, met: null, providers: {}
+      });
+    }
+    return places;
+  }
+
+  /* Everything the page shows comes from the device: the starting places are
+     here, the numbers are cached per place. */
+  function bootstrap() {
+    state.data = { places: seedPlaces(), generated: null, errors: [] };
+    attachCustom();
+    var places = state.data.places, i, newest = 0;
+    for (i = 0; i < places.length; i++) {
+      loadPlaceCache(places[i]);
+      if (places[i].fetchedAt && places[i].fetchedAt > newest) newest = places[i].fetchedAt;
+    }
+    /* the footer should say how old the cache is, not "unknown" */
+    if (newest) {
+      var when = new Date(newest).toISOString().replace(/\.[0-9]+Z$/, "Z");
+      state.data.generated = when;
+      lastSuccess = newest;
+    }
+    render();
+  }
+
+  /* iOS suspends standalone web apps; on resume the page may be hours old. */
+  function refreshIfStale() {
+    if (!state.data) { bootstrap(); return; }
+    if ((new Date()).getTime() - lastSuccess > 5 * 60 * 1000) {
+      retryDelay = 3000;
+      refresh();
+    }
+  }
+
+  function setCity(id) {
+    state.cityId = id;
+    try { window.localStorage.setItem(STORE_CITY, id); } catch (e) {}
+    var place = findPlace(id);
+    if (place) loadPlaceCache(place);
+    if (state.data) render();
+    if (place && state.data) {
+      fetchPlaceForecast(place, function (ok) { if (ok) render(); });
+      fetchMet(place, function (ok) { if (ok) render(); });
+      fetchProviders(place, function (ok) { if (ok) render(); });
+    }
+  }
+
+  function setLang(lang) {
+    if (!STRINGS[lang]) return;
+    state.lang = lang;
+    try { window.localStorage.setItem(STORE_LANG, lang); } catch (e) {}
+    if (state.data) render();
+    if ($("legend-panel").className.indexOf("open") >= 0) renderLegend();
+    if ($("install").className.indexOf("open") >= 0) renderInstall();
+  }
+
+  /* A new shell can only be picked up by navigating to a URL Safari has not
+     cached; the meta version tells us when that is worth doing. */
+  function reloadApp(version) {
+    try {
+      window.localStorage.setItem(STORE_RELOAD,
+        JSON.stringify({ version: version, at: (new Date()).getTime() }));
+    } catch (e) {}
+    window.location.replace(location.pathname + "?v=" + encodeURIComponent(version));
+  }
+
+  function checkVersion() {
+    var request = new XMLHttpRequest();
+    request.open("GET", "index.html?t=" + (new Date()).getTime(), true);
+    request.timeout = 20000;
+    request.onload = function () {
+      if (request.status < 200 || request.status >= 300) return;
+      var match = /name="app-version"\s+content="([^"]+)"/.exec(request.responseText);
+      if (!match || match[1] === APP_VERSION) return;
+      var attempt = null;
+      try { attempt = JSON.parse(window.localStorage.getItem(STORE_RELOAD) || "null"); } catch (e) {}
+      /* Give an attempt time to land, but never block forever. */
+      if (attempt && attempt.version === match[1] &&
+          ((new Date()).getTime() - attempt.at) < 10 * 60 * 1000) {
+        return;
+      }
+      reloadApp(match[1]);
+    };
+    request.send();
+  }
+
+  $("chips").onclick = function (event) {
+    var node = event.target;
+    while (node && node.getAttribute &&
+           !node.getAttribute("data-id") && !node.getAttribute("data-action")) {
+      node = node.parentNode;
+    }
+    if (!node || !node.getAttribute) return;
+    if (node.getAttribute("data-action") === "open") { go("mjesta"); return; }
+    var id = node.getAttribute("data-id");
+    if (id) setCity(id);
+  };
+
+  $("foot-left").onclick = openLog;
+  $("log-close").onclick = function () { $("logpanel").className = "overlay"; };
+
+  $("legend-link").onclick = function () { go("legenda"); };
+  $("install-link").onclick = function () { go("instalacija"); };
+  $("legend-close").onclick = function () { go(""); };
+  $("install-close").onclick = function () { go(""); };
+
+  document.addEventListener("click", function (event) {
+    var id = event.target && event.target.id;
+    if (id === "save-keys") {
+      setKey("meteoblue", ($("key-meteoblue").value || "").trim());
+      setKey("visualcrossing", ($("key-visualcrossing").value || "").trim());
+      go("");
+      refresh();
+    } else if (id === "reset-app") {
+      if (window.confirm(t("installResetAsk"))) resetApp();
+    }
+  }, false);
+
+  function resetApp() {
+    var keys = [], i, key;
+    try {
+      for (i = 0; i < window.localStorage.length; i++) {
+        key = window.localStorage.key(i);
+        if (key && key.indexOf("wh.") === 0) keys.push(key);
+      }
+      for (i = 0; i < keys.length; i++) window.localStorage.removeItem(keys[i]);
+    } catch (e) {}
+    window.location.replace(window.location.pathname);
+  }
+
+  $("search").oninput = function () {
+    renderOverlay(this.value);
+    scheduleGeo(this.value.trim());
+  };
+  $("close").onclick = function () { go(""); };
+
+  $("ovlist").onclick = function (event) {
+    var node = event.target, star = null, select = null, add = null, del = null;
+    var fav = null, depth = 0;
+    while (node && node.getAttribute && depth < 4) {
+      if (add === null && node.getAttribute("data-add") !== null) {
+        add = node.getAttribute("data-add");
+      }
+      if (fav === null && node.getAttribute("data-fav") !== null) {
+        fav = node.getAttribute("data-fav");
+      }
+      if (del === null && node.getAttribute("data-del")) del = node.getAttribute("data-del");
+      node = node.parentNode;
+      depth++;
+    }
+    if (del) { removeCustomPlace(del); renderOverlay($("search").value); return; }
+    if (fav !== null) { addPlace(geoResults[+fav], true); return; }
+    if (add !== null) { addPlace(geoResults[+add], false); return; }
+    node = event.target; depth = 0;
+    while (node && node.getAttribute && depth < 4) {
+      if (!star && node.getAttribute("data-star")) star = node.getAttribute("data-star");
+      if (!select && node.getAttribute("data-select")) select = node.getAttribute("data-select");
+      node = node.parentNode;
+      depth++;
+    }
+    if (star) {
+      toggleFavorite(star);
+      renderChips();
+      renderOverlay($("search").value);
+      return;
+    }
+    if (select) {
+      setCity(select);
+      closeOverlay();
+    }
+  };
+
+  $("lang").onclick = function (event) {
+    var lang = event.target.getAttribute && event.target.getAttribute("data-lang");
+    if (lang) setLang(lang);
+  };
+
+  function setPanel(panel) {
+    if (panel === state.panel) return;
+    if (panel !== "hours" && panel !== "compare") return;
+    state.panel = panel;
+    try { window.localStorage.setItem(STORE_PANEL, panel); } catch (e) {}
+    if (state.data) render();
+  }
+
+  $("panel-switch").onclick = function (event) {
+    var panel = event.target.getAttribute && event.target.getAttribute("data-panel");
+    if (panel) setPanel(panel);
+  };
+
+  /* Fingers, not cursors: the forecast and the comparison swap on a horizontal
+     swipe, except inside the hourly strip, where sideways means scroll. */
+  var swipeStartX = 0, swipeStartY = 0, swipeActive = false;
+
+  function inHourStrip(node) {
+    while (node) {
+      if (node.className && String(node.className).indexOf("hours") >= 0) return true;
+      node = node.parentNode;
+    }
+    return false;
+  }
+
+  $("views").addEventListener("touchstart", function (event) {
+    var touch = event.touches[0];
+    swipeStartX = touch.clientX;
+    swipeStartY = touch.clientY;
+    swipeActive = !inHourStrip(event.target);
+  }, false);
+
+  $("views").addEventListener("touchend", function (event) {
+    if (!swipeActive) return;
+    swipeActive = false;
+    var touch = event.changedTouches[0];
+    var dx = touch.clientX - swipeStartX;
+    var dy = touch.clientY - swipeStartY;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    setPanel(dx < 0 ? "compare" : "hours");
+  }, false);
+
+  $("refresh").onclick = function () {
+    this.className = "refresh busy";
+    refresh();
+  };
+
+  $("foot-right").onclick = function (event) {
+    var node = event.target;
+    if (node && node.className && String(node.className).indexOf("ver") >= 0) {
+      reloadApp(String((new Date()).getTime()));
+    }
+  };
+
+  /* Pull down anywhere to refetch the visible place; the selected city stays. */
+  var pullStartY = 0, pullActive = false;
+
+  document.addEventListener("touchstart", function (event) {
+    pullStartY = event.touches[0].clientY;
+    pullActive = $("overlay").className.indexOf("open") < 0 &&
+                 $("legend-panel").className.indexOf("open") < 0 &&
+                 $("install").className.indexOf("open") < 0;
+  }, false);
+
+  document.addEventListener("touchend", function (event) {
+    if (!pullActive) return;
+    pullActive = false;
+    var dy = event.changedTouches[0].clientY - pullStartY;
+    if (dy > 90) refresh();
+  }, false);
+
+  function parseFavorites(raw) {
+    var parsed = null;
+    if (!raw) return DEFAULT_FAVS.slice(0);
+    try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+    if (!parsed || !parsed.length) return DEFAULT_FAVS.slice(0);
+    return parsed;
+  }
+
+  var savedCity = null, savedLang = null, savedFavs = null;
+  try {
+    savedCity = window.localStorage.getItem(STORE_CITY);
+    savedLang = window.localStorage.getItem(STORE_LANG);
+    savedFavs = window.localStorage.getItem(STORE_FAVS);
+  } catch (e) {}
+  if (savedCity) state.cityId = savedCity;
+  state.favs = parseFavorites(savedFavs);
+  try {
+    var savedPanel = window.localStorage.getItem(STORE_PANEL);
+    if (savedPanel === "hours" || savedPanel === "compare") state.panel = savedPanel;
+  } catch (e) {}
+  state.lang = STRINGS[savedLang] ? savedLang
+    : (/^hr/i.test(navigator.language || "") ? "hr" : "en");
+
+  renderLanguages();
+
+  /* Cold start: places live in the page, numbers in the per-place cache, so the
+     screen is painted before the first request leaves. */
+  logLine("start " + APP_VERSION + " \u00b7 " + (navigator.onLine ? "online" : "offline"));
+  loadCustom();
+  bootstrap();
+  applyHash();
+  loadNormals();
+  refresh();
+  window.setInterval(refresh, 15 * 60 * 1000);
+  window.setInterval(checkVersion, 10 * 60 * 1000);
+  document.addEventListener("touchstart", wakeScreen, true);
+  document.addEventListener("click", wakeScreen, true);
+  applyDim();
+  window.setInterval(applyDim, 30 * 1000);
+  renderClock();
+  window.setInterval(renderClock, 10 * 1000);
+
+  window.addEventListener("hashchange", applyHash);
+  window.addEventListener("pageshow", function () {
+    refreshIfStale();
+    applyHash();
+    checkVersion();
+    renderClock();
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) { refreshIfStale(); renderClock(); }
+  });
+})();
+</script>
+</body>
+</html>
