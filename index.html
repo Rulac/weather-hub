@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.42">
+<meta name="app-version" content="2026-11-20.44">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -344,6 +344,86 @@
   /* tapping the version forces a fresh shell; the only way out when the iPad
      is stuck on an old build. */
   .foot .ver { color: #7f7f7f; border-bottom: 1px dotted #3a3a3a; padding: 4px 2px; }
+
+  /* Phones: the kiosk frame becomes an ordinary scrolling page. The iPad keeps
+     the fixed 100% layout above, because there everything has to fit at once. */
+  @media (max-width: 700px), (max-height: 500px) and (orientation: landscape) {
+    html, body { height: auto; min-height: 100%; overflow: visible;
+                 position: static; }
+    body { overflow-x: hidden; overflow-y: auto;
+           -webkit-overflow-scrolling: touch; }
+    .app { height: auto; min-height: 100%; min-height: 100vh; }
+
+    .top { padding: 8px 10px 0; }
+    .chip { font-size: 15px; padding: 10px 3px; }
+
+    /* the current block wraps: glyph and temperature first, details below */
+    .now { -webkit-flex-wrap: wrap; flex-wrap: wrap;
+           -webkit-align-items: flex-start; align-items: flex-start;
+           padding: 4px 14px 8px; }
+    .now .glyphcol { -webkit-flex: 0 0 78px; flex: 0 0 78px;
+                     -webkit-order: 1; order: 1; }
+    .now .glyph { font-size: 64px; width: 78px; }
+    .now .clock { font-size: 18px; }
+    .now .temp { font-size: 58px; letter-spacing: -2px;
+                 -webkit-order: 2; order: 2; }
+    .now .temp .unit { font-size: 22px; vertical-align: 14px; }
+    .now .place { margin-left: auto; max-width: 46%;
+                  -webkit-order: 3; order: 3; }
+    .now .place .name { font-size: 25px; line-height: 1.15; white-space: nowrap;
+                        overflow: hidden; text-overflow: ellipsis; }
+    .now .place .coords { font-size: 12px; }
+    .now .meta { -webkit-flex: 1 1 100%; flex: 1 1 100%; margin: 9px 0 0;
+                 font-size: 15px; line-height: 1.45;
+                 -webkit-order: 4; order: 4;
+                 -webkit-flex-wrap: wrap; flex-wrap: wrap;
+                 -webkit-align-items: flex-start; align-items: flex-start; }
+    .now .meta .mcol + .mcol { margin-left: 18px; }
+    .now .meta .lbl { font-size: 13px; }
+    .now .meta .cond { font-size: 18px; }
+    .now .meta .sun { font-size: 13px; }
+    .now .meta .src { font-size: 11px; }
+
+    /* panels grow with their content instead of stretching to the viewport */
+    .views { -webkit-flex: none; flex: none; min-height: 0; }
+    .forecast.on, .cmp.on { -webkit-flex: none; flex: none; min-height: 0; }
+
+    /* fifteen days do not fit a phone: scroll them like the hours */
+    .strip { overflow-x: auto; -webkit-overflow-scrolling: touch;
+             padding: 0 10px 4px; }
+    .day { -webkit-flex: 0 0 68px; flex: 0 0 68px; }
+    .day .dn { font-size: 16px; }
+    .day .dd { font-size: 13px; }
+    .day .g { font-size: 36px; }
+    .day .hi { font-size: 22px; }
+    .day .lo { font-size: 17px; }
+    .day .w { font-size: 14px; }
+    .day .sp { height: 20px; }
+
+    /* comparisons: the page scrolls; each table gets its own sideways strip,
+       because neither twenty-four hours nor fifteen days can be squeezed */
+    .cmp { padding: 0 10px; }
+    .ctwrap { -webkit-flex: none; flex: none; min-height: 0;
+              overflow: visible; }
+    .hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #hour-table { min-width: 880px; }
+    #day-table { min-width: 720px; }
+    .mstats { font-size: 12px; margin: 8px 0; }
+    .mstats b { font-size: 13px; }
+
+    /* footer: several rows in the document, not a bar across the screen */
+    .foot { -webkit-flex-wrap: wrap; flex-wrap: wrap; white-space: normal;
+            overflow: visible; padding: 10px 14px 12px; }
+    .footmain, .footmid, .foottools { -webkit-flex: 1 1 100%; flex: 1 1 100%;
+                                      min-width: 0; }
+    .footmid { -webkit-justify-content: center; justify-content: center;
+               margin-top: 8px; }
+    .foottools { margin-top: 8px; }
+    .foot #foot-left { white-space: normal; overflow: visible;
+                       text-overflow: clip; border-bottom: none; }
+    .foottools #foot-right { white-space: normal; overflow: visible;
+                             text-overflow: clip; margin-right: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -911,6 +991,7 @@
     if (/OPiOS|OPR\//i.test(ua)) return "Opera";
     if (/SamsungBrowser/.test(ua)) return "Samsung";
     if (/Chrome\//.test(ua)) return "Chrome";
+    if (/Firefox\//.test(ua)) return "Firefox";
     if (/Safari/.test(ua)) return "Safari";
     return navigator.appName || "browser";
   }
@@ -2488,46 +2569,10 @@
     if (state.data) render();
   }
 
-  /* One swipe moves to the neighbouring screen, in either direction. */
-  function stepPanel(direction) {
-    var at = PANELS.indexOf(state.panel);
-    if (at < 0) return;
-    setPanel(PANELS[at + direction]);
-  }
-
   $("panel-switch").onclick = function (event) {
     var panel = event.target.getAttribute && event.target.getAttribute("data-panel");
     if (panel) setPanel(panel);
   };
-
-  /* Fingers, not cursors: the forecast and the comparison swap on a horizontal
-     swipe, except inside the hourly strip, where sideways means scroll. */
-  var swipeStartX = 0, swipeStartY = 0, swipeActive = false;
-
-  function inHourStrip(node) {
-    while (node) {
-      if (node.className && String(node.className).indexOf("hours") >= 0) return true;
-      node = node.parentNode;
-    }
-    return false;
-  }
-
-  $("views").addEventListener("touchstart", function (event) {
-    var touch = event.touches[0];
-    swipeStartX = touch.clientX;
-    swipeStartY = touch.clientY;
-    swipeActive = !inHourStrip(event.target);
-  }, false);
-
-  $("views").addEventListener("touchend", function (event) {
-    if (!swipeActive) return;
-    swipeActive = false;
-    var touch = event.changedTouches[0];
-    var dx = touch.clientX - swipeStartX;
-    var dy = touch.clientY - swipeStartY;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    stepPanel(dx < 0 ? 1 : -1);
-  }, false);
 
   $("refresh").onclick = function () {
     this.className = "refresh busy";
@@ -2546,7 +2591,11 @@
 
   document.addEventListener("touchstart", function (event) {
     pullStartY = event.touches[0].clientY;
-    pullActive = $("overlay").className.indexOf("open") < 0 &&
+    /* On a phone the page scrolls, so a downward drag is usually just
+       scrolling. Only a pull that starts at the very top refreshes. */
+    pullActive = !(document.documentElement.scrollTop ||
+                   document.body.scrollTop || window.pageYOffset) &&
+                 $("overlay").className.indexOf("open") < 0 &&
                  $("legend-panel").className.indexOf("open") < 0 &&
                  $("install").className.indexOf("open") < 0;
   }, false);

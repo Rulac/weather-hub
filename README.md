@@ -41,8 +41,9 @@ Weekends are tinted, today is marked, the screen dims between 22:00 and 07:00
 (a tap lifts it for a minute), and everything is translated to Croatian and
 English. Icons follow the sun: clear and partly cloudy are a moon after dark.
 Tapping the data age opens a **log** with timestamped lines about every source.
-The hourly strip scrolls sideways on a narrow screen; each comparison screen
-scrolls down on its own.
+On a phone the page scrolls normally and the footer sits at its end. The hourly
+and daily strips scroll sideways, as do the comparison tables when their columns
+do not fit; on the iPad each comparison screen scrolls down on its own.
 
 ## Where the data comes from
 
