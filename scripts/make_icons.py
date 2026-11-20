@@ -92,8 +92,8 @@ def render(size):
 
 
 def main():
-    for name, size in (("icon.png", 76), ("icon-152.png", 152), ("favicon.png", 32),
-                       ("icon-512.png", 512)):
+    for name, size in (("icon.png", 76), ("icon-152.png", 152), ("icon-192.png", 192),
+                       ("favicon.png", 32), ("icon-512.png", 512)):
         path = os.path.join(ROOT, name)
         with open(path, "wb") as handle:
             handle.write(render(size))

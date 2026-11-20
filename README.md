@@ -20,6 +20,11 @@ fetched by the device itself.
    Home button inside the app, so nobody wanders off.
 5. **Settings → Display & Brightness → Auto-Lock → Never.**
 
+On a phone the page installs as a PWA from the same URL: Chrome offers
+*Install app* in the menu, and iOS uses **Share → Add to Home Screen**.
+`manifest.json` supplies the name, icons and the standalone window; no service
+worker is involved, so updates still arrive the usual way.
+
 iOS caches home-screen icons: after an icon change, remove the icon and add it
 again.
 
@@ -140,6 +145,7 @@ fallback.
 | `index.html` | the whole app: markup, styles, ES5 logic, i18n |
 | `icons.js` | SVG icon set, shared with the legend |
 | `normals.json` | monthly climate normals, rebuilt by hand |
+| `manifest.json` | web app manifest: name, icons, standalone window |
 | `trust.mobileconfig` | roots missing from iOS 9 |
 | `icon*.png`, `favicon.png` | icons, drawn by `scripts/make_icons.py` |
 | `v.html` | redirect kept for anything pinned to it |
