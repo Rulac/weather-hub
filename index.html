@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.44">
+<meta name="app-version" content="2026-11-20.45">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -411,18 +411,23 @@
     .mstats { font-size: 12px; margin: 8px 0; }
     .mstats b { font-size: 13px; }
 
-    /* footer: several rows in the document, not a bar across the screen */
-    .foot { -webkit-flex-wrap: wrap; flex-wrap: wrap; white-space: normal;
-            overflow: visible; padding: 10px 14px 12px; }
-    .footmain, .footmid, .foottools { -webkit-flex: 1 1 100%; flex: 1 1 100%;
-                                      min-width: 0; }
-    .footmid { -webkit-justify-content: center; justify-content: center;
-               margin-top: 8px; }
+    /* footer: one centered row per group, in the document, not a bar */
+    .foot { display: block; white-space: normal; overflow: visible;
+            padding: 10px 14px 12px; text-align: center; }
+    .footmain, .footmid, .foottools {
+      width: 100%; min-width: 0;
+      display: -webkit-flex; display: flex;
+      -webkit-align-items: center; align-items: center;
+      -webkit-justify-content: center; justify-content: center;
+    }
+    .footmid { margin-top: 8px; }
     .foottools { margin-top: 8px; }
     .foot #foot-left { white-space: normal; overflow: visible;
-                       text-overflow: clip; border-bottom: none; }
+                       text-overflow: clip; border-bottom: none;
+                       text-align: center; }
     .foottools #foot-right { white-space: normal; overflow: visible;
-                             text-overflow: clip; margin-right: 10px; }
+                             text-overflow: clip; margin-right: 10px;
+                             text-align: center; }
   }
 </style>
 </head>
