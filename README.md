@@ -11,7 +11,7 @@ fetched by the device itself.
 ## Installing it on the iPad
 
 1. Open <https://rulac.github.io/weather-hub/> in **Safari**.
-2. Tap **instalacija** in the footer and press **Instaliraj profil**. Without the
+2. Tap **setup** in the footer and press **Instaliraj profil**. Without the
    profile the page cannot reach any weather API — iOS 9 has none of the roots
    these services use. Confirm the install in Settings.
 3. **Share → Add to Home Screen.** Open the app from the icon, not from Safari;
@@ -29,13 +29,13 @@ again.
 |---|---|
 | Places | favourite places, `+` opens the picker |
 | Now | glyph, temperature, condition, wind, humidity, sunrise/sunset and civil twilight |
-| Hours | the next 24 hours: icon, temperature, chance of rain |
-| Days | icon, daily high and low, `±n` when the models disagree |
+| Hours | the next 24 hours: icon, temperature, wind, chance of rain |
+| Days | icon, daily high and low, wind, `±n` from 2 °C when the models disagree |
 | Clock | current time under the weather icon |
 | `SATI I DANI` / `PO SATIMA` / `PO DANIMA` | switch between the forecast and the two comparison screens |
-| Comparison | one row per provider: by the hour, icon + temperature; by the day, icon + high/low |
+| Comparison | one row per provider: by the hour, icon + temperature; by the day, icon + high/low; both end with a `±` spread from 2 °C |
 | Normals | monthly averages above the daily comparison, with the 8-day departure |
-| Footer | data age and a one-word status, legend, install, version, refresh |
+| Footer | refresh, data age and a one-word status, legend, setup, version, language |
 
 Weekends are tinted, today is marked, the screen dims between 22:00 and 07:00
 (a tap lifts it for a minute), and everything is translated to Croatian and
@@ -53,12 +53,15 @@ live in `index.html`; every number is cached per place in `localStorage`.
 |---|---|---|
 | ECMWF IFS 0.25 | 15 days | Open-Meteo — drives the hours and the days |
 | ICON (DWD) | 7 days | Open-Meteo |
-| GFS (NOAA) | 16 days | Open-Meteo |
 | KNMI HARMONIE | 5 days | Open-Meteo |
 | DMI HARMONIE | 5 days | Open-Meteo |
 | MET Norway (Yr.no) | 10 days | `api.met.no`, aggregated to local days on the device |
-| Meteoblue | 14 days | key typed in the install panel |
-| Visual Crossing | 15 days | key typed in the install panel |
+| Meteoblue | 14 days | key typed in the setup panel |
+
+The home screen is not an average: the **setup** panel picks the model that
+drives the current block, the hours and the days — ECMWF by default, DWD, KNMI
+or DMI on request. Only the Open-Meteo models have an hourly line, so Yr.no and
+Meteoblue stay in the daily comparison.
 
 Each source is refreshed on its own: a dead or slow one never holds back the
 numbers that did arrive, and its row stays in the table, dimmed.
@@ -66,16 +69,19 @@ numbers that did arrive, and its row stays in the table, dimmed.
 ### Quota and keys
 
 Open-Meteo counts models and variables against a daily allowance. A place is
-refetched at most every ten minutes, the background tick is fifteen, and a 429
-suspends requests for half an hour — the footer then reads `podaci: … · kvota`.
+refetched at most every ten minutes, the background tick is fifteen by default
+and adjustable in **setup** from *now* in five-minute steps, and a 429 suspends
+requests for half an hour — the footer then reads `podaci: … · kvota`.
 
-Meteoblue and Visual Crossing are optional and need a free key, typed on the
-device and stored in `localStorage`; no server ever holds them:
+Meteoblue is optional and needs a free key, typed on the device and stored in
+`localStorage`; no server ever holds it:
 
 | Service | Where |
 |---|---|
 | Meteoblue | register at <https://www.meteoblue.com>, then *My Account → API* |
-| Visual Crossing | register at <https://www.visualcrossing.com>, then *Account → API Key* |
+
+The legend shows whether the Meteoblue key is set: without it the provider is
+not used, with it its row appears in the daily comparison.
 
 Saving a key calls the service once and prints `key works` or `key rejected
 (HTTP …)` under the field.
@@ -103,7 +109,7 @@ the footer forces a cache-busted reload — the way out when the iPad is stuck.
 
 `trust.mobileconfig` adds ISRG Root X1/X2 and the Google Trust Services roots.
 
-Try the button in the **instalacija** panel first; some iOS builds install a
+Try the button in the **setup** panel first; some iOS builds install a
 mislabeled profile. If Safari only displays the file, GitHub Pages is sending
 `application/octet-stream` and only a server you control can set the right type:
 

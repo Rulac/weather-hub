@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" sizes="76x76" href="icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <script src="icons.js"></script>
-<meta name="app-version" content="2026-11-20.35">
+<meta name="app-version" content="2026-11-20.41">
 <title>Weather Hub</title>
 <style>
   /* position: fixed stops iOS 9 from dragging the whole page on a tap, which
@@ -105,7 +105,8 @@
   .lg-row .v b { color: #e8eef7; font-weight: 600; }
   .lg-row .v.ok { color: #46d17a; }
   .lg-row .v.err { color: #ff8a6b; }
-  .foot #foot-left { border-bottom: 1px dotted #3a3a3a; padding: 4px 0; }
+  .foot #foot-left { border-bottom: 1px dotted #3a3a3a; padding: 4px 0;
+                     overflow: hidden; text-overflow: ellipsis; }
   .lg-row .v a { color: #6bb6ff; text-decoration: none;
                  word-break: break-all; -webkit-word-break: break-all; }
   .installbtn { display: block; margin: 10px 0 14px; padding: 20px 16px; text-align: center;
@@ -114,6 +115,14 @@
                 border: 1px solid #4a4a4a; }
   .installbtn:active { background: #262626; }
   .lg-note { margin-top: 22px; color: #666666; font-size: 14px; line-height: 1.7; }
+  .lg-keynote { margin: 10px 0 4px; padding: 9px 12px; background: #0e0e0e;
+                border: 1px solid #262626; border-radius: 8px; color: #9a9a9a;
+                font-size: 14px; line-height: 1.45; }
+  .lg-keynote b { color: #e8eef7; font-weight: 600; }
+  .lg-keynote a { color: #6bb6ff; text-decoration: none; }
+  .lg-radio { display: block; margin: 9px 0; color: #c8c8c8; font-size: 15px;
+              line-height: 1.3; }
+  .lg-radio input { margin-right: 9px; vertical-align: -1px; }
   .keyinput { width: 100%; font: inherit; font-size: 16px; padding: 9px 12px;
               background: #0e0e0e; color: #e8eef7; border: 1px solid #1c1c1c;
               border-radius: 8px; -webkit-appearance: none;
@@ -152,6 +161,7 @@
   .now .meta b { color: #e8eef7; font-weight: 500; }
   .now .meta .cond { color: #e8eef7; font-size: 24px; }
   .now .meta .sun { font-size: 18px; line-height: 1.55; }
+  .now .meta .src { color: #5f5f5f; font-size: 13px; padding-top: 4px; }
   .now .place { margin-left: auto; text-align: right; }
   .now .place .name { font-size: 42px; font-weight: 500; }
   .now .place .coords { font-size: 15px; color: #666666; line-height: 1.3;
@@ -173,7 +183,7 @@
   .hours { display: -webkit-flex; display: flex; padding: 2px 10px 4px;
            overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 135px; }
   .hour { -webkit-flex: 1 0 38px; flex: 1 0 38px; text-align: center;
-          padding: 3px 0 4px; border-radius: 9px; margin: 0 1px; }
+          padding: 3px 0 4px; margin: 0 1px; }
   .hour.cur { background: #171717; }
   .hour.mid { border-left: 1px solid #2a2a2a; }
   .hour .ht { font-size: 16px; color: #9a9a9a; }
@@ -182,13 +192,16 @@
              white-space: nowrap; overflow: hidden; }
   .hour .g { font-size: 36px; line-height: 1.16; }
   .hour .temp { font-size: 21px; font-weight: 500; }
+  .hour .w { font-size: 14px; color: #8a8a8a; height: 18px; line-height: 18px; }
   .hour .pp { font-size: 11px; color: #6bb6ff; height: 15px; }
+  .w .ar { display: inline-block; font-size: 1.15em; line-height: 1;
+           margin-right: 2px; vertical-align: -1px; }
   .hnote { padding: 18px; color: #666666; font-size: 16px; }
 
   /* daily strip */
   .strip { display: -webkit-flex; display: flex; padding: 0 10px; }
   .day { -webkit-flex: 1; flex: 1; text-align: center; padding: 5px 0 3px;
-         border-radius: 10px; margin: 0 2px; }
+         margin: 0 2px; }
   .day.today { background: #171717; }
   .day.weekend { background: #121212;
                  -webkit-box-shadow: inset 0 -3px 0 0 #2e2e2e;
@@ -200,6 +213,7 @@
   .ic { width: 1em; height: 1em; display: inline-block; vertical-align: middle; }
   .day .hi { font-size: 27px; font-weight: 500; }
   .day .lo { font-size: 20px; color: #7f7f7f; padding-top: 1px; }
+  .day .w { font-size: 16px; color: #8a8a8a; height: 22px; line-height: 22px; }
   .day .sp { font-size: 14px; color: #ffb020; height: 24px; }
 
   /* comparison: providers against the clock (hours) and against the calendar
@@ -238,15 +252,18 @@
 
   /* One table per screen, and the whole horizon has to fit it: the cell stacks
      the icon over the numbers, so a column needs about thirty pixels instead of
-     fifty-five and sixteen days (or twenty-four hours) fit without scrolling. */
+     fifty-five and fifteen days (or twenty-four hours) fit without scrolling. */
   .ct { border-collapse: collapse; width: 100%; table-layout: fixed; }
   .ct th, .ct td { padding: 9px 0; border-bottom: 1px solid #161616;
                    text-align: center; }
   .ct th { font-weight: 500; color: #9a9a9a; font-size: 13px; }
-  .ct th:first-child, .ct td.src { text-align: left; width: 60px; }
+  .ct th:first-child, .ct td.src { text-align: left; width: 64px; }
   .ct td.src { font-size: 13px; color: #9a9a9a; white-space: normal;
                padding-left: 2px; line-height: 1.05; }
+  .ct td.src .sc { display: block; font-size: 10px; color: #5a5a5a;
+                   line-height: 1.15; }
   .ct td.src.off { color: #4f4f4f; }
+  .ct td.src.off .sc { color: #3f3f3f; }
   .ct .hh { display: block; font-size: 13px; color: #9a9a9a; }
   .ct .dd2 { display: block; font-size: 11px; color: #5a5a5a; line-height: 1.2;
              min-height: 13px; }
@@ -260,12 +277,12 @@
   .ct .na { color: #4a4a4a; }
   .ct tr.spread td { color: #ffb020; font-size: 14px; padding-bottom: 6px; }
   .ct tr.spread td.src { color: #666666; }
-  /* five rows instead of seven leave more air: the hours table breathes more */
+  /* four rows instead of five leave more air: the hours table breathes more */
   #hour-table { font-size: 15px; }
   #hour-table th, #hour-table td { padding: 16px 0; }
   #hour-table td .ic { width: 22px; height: 22px; }
 
-  /* Landscape has half the height: the same seven rows have to fit in it, so
+  /* Landscape has half the height: the same five rows have to fit in it, so
      the cells lose their air instead of the table losing its last days. */
   @media (max-height: 820px) {
     .ct th, .ct td { padding: 2px 0; }
@@ -276,7 +293,8 @@
     .ct .hh { font-size: 12px; }
     .ct .dd2 { font-size: 10px; min-height: 11px; }
     .ct td.src { font-size: 11px; }
-    /* five rows and plenty of height: the hours table can grow instead of
+    .ct td.src .sc { font-size: 9px; }
+    /* four rows and plenty of height: the hours table can grow instead of
        shrinking with the rest */
     #hour-table { font-size: 19px; }
     #hour-table th, #hour-table td { padding: 9px 0; }
@@ -298,17 +316,29 @@
           -webkit-align-items: center; align-items: center;
           padding: 3px 18px 2px; font-size: 14px; color: #666666;
           border-top: 1px solid #262626; }
-  .foottools { margin-left: auto; display: -webkit-flex; display: flex;
+  .footmain { -webkit-flex: 1 1 0; flex: 1 1 0; min-width: 0;
+              display: -webkit-flex; display: flex;
+              -webkit-align-items: center; align-items: center; }
+  .footmain .refresh { font-size: 15px; line-height: 1; padding: 4px 9px 6px;
+                       margin: 0 10px 0 0; }
+  .footmid { -webkit-flex: 0 0 auto; flex: 0 0 auto;
+             display: -webkit-flex; display: flex;
+             -webkit-align-items: center; align-items: center; }
+  .foottools { -webkit-flex: 1 1 0; flex: 1 1 0; min-width: 0;
+               -webkit-justify-content: flex-end; justify-content: flex-end;
+               display: -webkit-flex; display: flex;
                -webkit-align-items: center; align-items: center; }
-  .foottools #foot-right { margin-right: 16px; }
+  .foottools #foot-right { margin-right: 16px; overflow: hidden;
+                           text-overflow: ellipsis; }
   .foottools .lang button { font-size: 12px; padding: 5px 10px; border-radius: 0; }
   .foottools .lang button:first-child { border-radius: 7px 0 0 7px; }
   .foottools .lang button:last-child { border-radius: 0 7px 7px 0; }
-  .foottools .refresh { font-size: 15px; line-height: 1; padding: 4px 10px 6px;
-                        margin-left: 7px; }
-  .foot .legend { font: inherit; font-size: 14px; margin-left: 18px; color: #7f7f7f;
+  .foot .legend { font: inherit; font-size: 14px; margin-left: 14px; color: #7f7f7f;
                   background: none; border: none; border-bottom: 1px dotted #3a3a3a;
-                  padding: 6px 0; }
+                  padding: 6px 0; display: -webkit-inline-flex; display: inline-flex;
+                  -webkit-align-items: center; align-items: center; }
+  .foot .legend:first-child { margin-left: 0; }
+  .foot .legend svg { margin-right: 5px; }
   .foot .err { color: #ffb020; }
   /* tapping the version forces a fresh shell; the only way out when the iPad
      is stuck on an old build. */
@@ -376,16 +406,20 @@
   </div>
 
   <div class="foot">
-    <div id="foot-left">&ndash;</div>
-    <button type="button" class="legend" id="legend-link">legenda</button>
-    <button type="button" class="legend" id="install-link">instalacija</button>
+    <div class="footmain">
+      <button type="button" class="refresh" id="refresh" title="Refresh">&#8635;</button>
+      <div id="foot-left">&ndash;</div>
+    </div>
+    <div class="footmid">
+      <button type="button" class="legend" id="legend-link"></button>
+      <button type="button" class="legend" id="install-link"></button>
+    </div>
     <div class="foottools">
       <span id="foot-right"></span>
       <div class="lang" id="lang">
         <button type="button" data-lang="hr">hr</button>
         <button type="button" data-lang="en">en</button>
       </div>
-      <button type="button" class="refresh" id="refresh" title="Refresh">&#8635;</button>
     </div>
   </div>
 </div>
@@ -439,6 +473,8 @@
   var STORE_RELOAD = "wh.reload";
   var STORE_PANEL = "wh.panel";
   var STORE_CUSTOM = "wh.custom";
+  var STORE_PROVIDER = "wh.provider";
+  var STORE_REFRESH = "wh.refresh";
 
   /* Version of the running shell, used to detect a newer index.html. */
   var APP_VERSION = (function () {
@@ -477,12 +513,21 @@
       addPlace: "Dodaj mjesto iz Open-Metea",
       loading: "u\u010ditavam\u2026",
       legend: "legenda",
-      install: "instalacija",
-      installTitle: "Izvori i certifikati",
+      setup: "setup",
+      installTitle: "Setup",
+      homeProviderTitle: "Model na po\u010detnoj",
+      homeProviderHint: "Trenutno stanje, satna traka i dani dolaze iz ovog modela. Yr.no i Meteoblue nemaju satne podatke, pa ostaju samo u usporedbi po danima.",
+      providerAuto: "automatski \u2014 ECMWF, pa DWD",
+      refreshTitle: "Osvje\u017eavanje",
+      refreshHint: "Najmanja starost podataka prije novog dohvata. Open-Meteo ionako odbija \u010de\u0161\u0107e od svakih 10 minuta.",
+      refreshNow: "sada",
+      refreshMinLabel: "min",
+      refreshLabel: "osvje\u017eavanje:",
       installProfile: "Certifikati",
       installProfileOpen: "Instaliraj profil",
       installProfileHint: "Otvara se u Safariju; potvrdi instalaciju i to je sve. Profil dodaje korijene koje iPad 9 nema, pa Open-Meteo postaje dostupan.",
       installSources: "Linkovi na svaki izvor koji aplikacija koristi",
+      installApis: "API adrese",
       srcDirect: "direktno",
       srcActions: "iz cachea",
       tagQuota: "kvota",
@@ -543,12 +588,21 @@
       addPlace: "Add a place from Open-Meteo",
       loading: "loading\u2026",
       legend: "legend",
-      install: "install",
-      installTitle: "Sources and certificates",
+      setup: "setup",
+      installTitle: "Setup",
+      homeProviderTitle: "Home model",
+      homeProviderHint: "The current block, the hourly strip and the days come from this model. Yr.no and Meteoblue have no hourly data, so they stay in the daily comparison only.",
+      providerAuto: "automatic \u2014 ECMWF, then DWD",
+      refreshTitle: "Refresh",
+      refreshHint: "The smallest data age before a new fetch. Open-Meteo refuses anything more often than every 10 minutes anyway.",
+      refreshNow: "now",
+      refreshMinLabel: "min",
+      refreshLabel: "refresh:",
       installProfile: "Certificates",
       installProfileOpen: "Install the profile",
       installProfileHint: "It opens in Safari; confirm the install and that is all. The profile adds the roots iOS 9 lacks, which is what lets the app reach Open-Meteo.",
       installSources: "Links to every source the app uses",
+      installApis: "API endpoints",
       srcDirect: "direct",
       srcActions: "from cache",
       tagQuota: "quota",
@@ -607,31 +661,35 @@
       abbr: "Skra\u0107enice izvora",
       marks: "Oznake na ekranu",
       sources: [
-        ["ECMWF", "Europski centar za srednjoro\u010dne prognoze. Model IFS 0,25\u00b0, do <b>15 dana</b> \u2014 glavni izvor za gornji dio ekrana."],
-        ["ICON", "Njema\u010dki meteorolo\u0161ki servis DWD. Do <b>7 dana</b>, pa u traci od 15 dana sudjeluje samo prvi tjedan."],
-        ["GFS", "Ameri\u010dki NOAA/NCEP. Do <b>16 dana</b>."],
-        ["KNMI", "Nizozemski meteorolo\u0161ki institut, model HARMONIE. Kratkoro\u010dno, do <b>5 dana</b>."],
-        ["DMI", "Danski meteorolo\u0161ki institut, HARMONIE. Kratkoro\u010dno, do <b>5 dana</b>."],
-        ["WMO", "Kodovi Svjetske meteorolo\u0161ke organizacije (61 = ki\u0161a, 71 = snijeg) koje pretvaramo u ikone."]
+        ["ECMWF", "Europski centar za srednjoro\u010dne prognoze. Model IFS 0,25\u00b0, do <b>15 dana</b> \u2014 glavni izvor za gornji dio ekrana.", "https://www.ecmwf.int"],
+        ["DWD", "Njema\u010dka meteorolo\u0161ka slu\u017eba, model ICON. Do <b>7 dana</b>, pa u traci od 15 dana sudjeluje samo prvi tjedan.", "https://www.dwd.de"],
+        ["KNMI", "Nizozemski meteorolo\u0161ki institut, model HARMONIE. Kratkoro\u010dno, do <b>5 dana</b>.", "https://www.knmi.nl"],
+        ["DMI", "Danski meteorolo\u0161ki institut, HARMONIE. Kratkoro\u010dno, do <b>5 dana</b>.", "https://www.dmi.dk"],
+        ["Yr.no", "Norve\u0161ki MET Norway (yr.no), do <b>10 dana</b>. Dolazi direktno s api.met.no i na ure\u0111aju se zbraja u lokalne dane.", "https://www.yr.no"],
+        ["Meteoblue", "\u0160vicarski servis, do <b>14 dana</b>. Pojavljuje se kad je u setupu upisan klju\u010d.", "https://www.meteoblue.com"],
+        ["Open-Meteo", "Posrednik za ECMWF, DWD, KNMI i DMI te klimatolo\u0161ke normale. Licenca CC BY 4.0.", "https://open-meteo.com"],
+        ["WMO", "Kodovi Svjetske meteorolo\u0161ke organizacije (61 = ki\u0161a, 71 = snijeg) koje pretvaramo u ikone.", "https://wmo.int"]
       ],
       notes: [
         ["11\u00b0 / 2\u00b0", "Najvi\u0161a i najni\u017ea dnevna temperatura."],
-        ["\u00b15", "Modeli se ne sla\u017eu: razlika najvi\u0161ih dnevnih me\u0111u svim modelima. Ispod 4 \u00b0C se ne prikazuje."],
-        ["usporedba", "Dvije plohe svaka sa svojim tabom, jedan redak po izvoru: <b>po satima</b> uspore\u0111uje sljede\u0107a 24 sata ikonom i temperaturom, <b>po danima</b> sve dane s ikonom i najvi\u0161om/najni\u017eom. Zadnji redak je \u00b1 razlika najvi\u0161ih me\u0111u modelima; izvor bez podataka ostaje siv."],
-        ["sati", "Gornja traka pokazuje sljede\u0107a 24 sata: ikonu, temperaturu i, ako je iznad 20 %, vjerojatnost oborine. Ispod nje je traka po danima."],
+        ["\u00b15", "Modeli se ne sla\u017eu: razlika najvi\u0161ih dnevnih me\u0111u svim modelima. Ispod 2 \u00b0C se ne prikazuje."],
+        ["vjetar", "Brzina u km/h. Strelica pokazuje kamo vjetar pu\u0161e; po satima je to vrijednost za taj sat, po danima najja\u010di vjetar dana s prete\u017eitim smjerom."],
+        ["usporedba", "Dvije plohe svaka sa svojim tabom, jedan redak po izvoru: <b>po satima</b> uspore\u0111uje sljede\u0107a 24 sata ikonom i temperaturom, <b>po danima</b> sve dane s ikonom i najvi\u0161om/najni\u017eom. Zadnji redak je \u00b1 razlika me\u0111u modelima \u2014 po satima temperatura sata, po danima najvi\u0161a dnevna \u2014 i prikazuje se od 2 \u00b0C; izvor bez podataka ostaje siv."],
+        ["sati", "Gornja traka pokazuje sljede\u0107a 24 sata: ikonu, temperaturu, vjetar i, ako je iznad 20 %, vjerojatnost oborine. Ispod nje je traka po danima."],
         ["no\u0107ne ikone", "Kad je sunce za\u0161lo, vedro je mjesec, a djelomi\u010dno obla\u010dno mjesec s oblakom. Danju su ikone sa suncem."],
-        ["Yr.no", "Norve\u0161ki model MET Norway (yr.no), do <b>10 dana</b>. Dolazi preko Open-Metea, jer iPad 9 ne mo\u017ee do njihovog API-ja."],
-        ["\u00b7", "Taj izvor za taj dan nema podataka \u2014 horizont mu je kra\u0107i (KNMI i DMI ~5 dana, ICON ~7, GFS 16)."],
+        ["\u00b7", "Taj izvor za taj dan nema podataka \u2014 horizont mu je kra\u0107i (KNMI i DMI ~5 dana, DWD ~7, Yr.no 10, ECMWF 15)."],
         ["prosjek 2020\u20132024", "Klimatolo\u0161ke normale za teku\u0107i mjesec: prosje\u010dna najni\u017ea i najvi\u0161a dnevna te mjese\u010dne oborine."],
         ["\u00b11,4\u00b0", "Odstupanje sljede\u0107ih 8 dana od normale \u2014 toplije crvenkasto, hladnije plavkasto."],
         ["podaci: prije 6 min", "Starost podataka. Grade se svakih 10 min, stranica ih dohvati svakih 5."],
         ["kiosk / preglednik", "Kiosk zna\u010di pokrenuto s ikone, bez adresne trake."],
         ["no\u0107no zatamnjenje", "Izme\u0111u 22 i 7 sati cijeli je ekran zatamnjen. Dodir ga razvedri na minutu, pa se sam vrati."],
         ["vikend", "Subota i nedjelja su svjetlije podloge i s donjim obrubom \u2014 dani kad se najvi\u0161e ide van."],
-                ["16 dana", "Najdulji horizont koji ijedan javni model daje po danima. Tablica zato staje na 16, a ne na 30 dana."],
+        ["15 dana", "Najdulji horizont koji ijedan model u aplikaciji daje po danima. Tablica zato staje na 15, a ne na 30 dana."],
         ["izlazak / zalazak", "Vremena izlaska i zalaska sunca za odabrano mjesto. Ispod njih civilni sumrak: od zore do sumraka, dok je sunce izme\u0111u 0\u00b0 i 6\u00b0 pod obzorom. Ra\u010duna se na ure\u0111aju."]
       ],
-      note: "Izvori: Open-Meteo (CC BY 4.0) za ECMWF, ICON, GFS, KNMI, DMI i normale. Meteoblue i Visual Crossing pojavljuju se kad im Actions ima klju\u010d. Ovo nije slu\u017ebena prognoza \u2014 za upozorenja provjeri DHMZ."
+      note: "Izvori: Open-Meteo (CC BY 4.0) za ECMWF, DWD, KNMI, DMI i normale; Yr.no dolazi s api.met.no. Meteoblue se pojavljuje kad je upisan klju\u010d. Ovo nije slu\u017ebena prognoza \u2014 za upozorenja provjeri DHMZ.",
+      keyOff: "<b>Meteoblue</b> tra\u017ei klju\u010d u <a href=\"#setup\">setupu</a>. Klju\u010d nije upisan, pa se ne koristi.",
+      keyOn: "<b>Meteoblue</b> tra\u017ei klju\u010d u <a href=\"#setup\">setupu</a>. Klju\u010d je upisan, pa se koristi u usporedbi."
     },
     en: {
       title: "Legend and abbreviations",
@@ -639,58 +697,105 @@
       abbr: "Provider abbreviations",
       marks: "Symbols on screen",
       sources: [
-        ["ECMWF", "European Centre for Medium-Range Weather Forecasts. IFS 0.25\u00b0 model, up to <b>15 days</b> \u2014 the main source for the top of the screen."],
-        ["ICON", "German weather service DWD. Up to <b>7 days</b>, so it only covers the first week of the strip."],
-        ["GFS", "US NOAA/NCEP. Up to <b>16 days</b>."],
-        ["KNMI", "Royal Netherlands Meteorological Institute, HARMONIE model. Short range, up to <b>5 days</b>."],
-        ["DMI", "Danish Meteorological Institute, HARMONIE. Short range, up to <b>5 days</b>."],
-        ["WMO", "World Meteorological Organization codes (61 = rain, 71 = snow) that we turn into icons."]
+        ["ECMWF", "European Centre for Medium-Range Weather Forecasts. IFS 0.25\u00b0 model, up to <b>15 days</b> \u2014 the main source for the top of the screen.", "https://www.ecmwf.int"],
+        ["DWD", "German weather service, ICON model. Up to <b>7 days</b>, so it only covers the first week of the strip.", "https://www.dwd.de"],
+        ["KNMI", "Royal Netherlands Meteorological Institute, HARMONIE model. Short range, up to <b>5 days</b>.", "https://www.knmi.nl"],
+        ["DMI", "Danish Meteorological Institute, HARMONIE. Short range, up to <b>5 days</b>.", "https://www.dmi.dk"],
+        ["Yr.no", "Norwegian MET Norway (yr.no), up to <b>10 days</b>. It comes straight from api.met.no and is aggregated into local days on the device.", "https://www.yr.no"],
+        ["Meteoblue", "Swiss service, up to <b>14 days</b>. Appears once a key is typed into the setup.", "https://www.meteoblue.com"],
+        ["Open-Meteo", "The broker for ECMWF, DWD, KNMI and DMI, and for the climate normals. CC BY 4.0 licence.", "https://open-meteo.com"],
+        ["WMO", "World Meteorological Organization codes (61 = rain, 71 = snow) that we turn into icons.", "https://wmo.int"]
       ],
       notes: [
         ["11\u00b0 / 2\u00b0", "Daily high and low."],
-        ["\u00b15", "Models disagree: the spread of daily highs across every model. Hidden below 4 \u00b0C."],
-        ["comparison", "Two screens, each on its own tab, one row per provider: <b>by the hour</b> compares the next 24 hours by icon and temperature, <b>by the day</b> every day with icon and high/low. The last row is the \u00b1 spread of highs across the models; a provider without data stays grey."],
-        ["hours", "The top strip shows the next 24 hours: icon, temperature and, above 20 %, the chance of precipitation. The daily strip sits below it."],
+        ["\u00b15", "Models disagree: the spread of daily highs across every model. Hidden below 2 \u00b0C."],
+        ["wind", "Speed in km/h. The arrow points where the wind blows; by the hour it is that hour's value, by the day the strongest wind of the day with its prevailing direction."],
+        ["comparison", "Two screens, each on its own tab, one row per provider: <b>by the hour</b> compares the next 24 hours by icon and temperature, <b>by the day</b> every day with icon and high/low. The last row is the \u00b1 spread across the models \u2014 the hour's temperature by the hour, the daily high by the day \u2014 shown from 2 \u00b0C; a provider without data stays grey."],
+        ["hours", "The top strip shows the next 24 hours: icon, temperature, wind and, above 20 %, the chance of precipitation. The daily strip sits below it."],
         ["night icons", "Once the sun is down, clear is a moon and partly cloudy is a moon behind a cloud. By day the icons carry a sun."],
-        ["Yr.no", "The Norwegian MET Norway model (yr.no), up to <b>10 days</b>. It arrives through Open-Meteo, because iOS 9 cannot reach their API."],
-        ["\u00b7", "That provider has no data for that day \u2014 its horizon is shorter (KNMI and DMI ~5 days, ICON ~7, GFS 16)."],
+        ["\u00b7", "That provider has no data for that day \u2014 its horizon is shorter (KNMI and DMI ~5 days, DWD ~7, Yr.no 10, ECMWF 15)."],
         ["2020\u20132024 average", "Climate normals for the running month: average daily low, average daily high and monthly precipitation."],
         ["\u00b11.4\u00b0", "How the next 8 days compare to the norm \u2014 warmer in red, colder in blue."],
         ["data: 6 min ago", "Age of the payload. Built every 10 minutes, fetched by the page every 5."],
         ["kiosk / browser", "Kiosk means launched from the Home Screen icon, without an address bar."],
         ["night dimming", "Between 22:00 and 07:00 the whole screen is darkened. A tap brightens it for a minute, then it fades back."],
         ["weekend", "Saturday and Sunday carry a lighter background and a bottom edge \u2014 the days people are out."],
-                ["16 days", "The longest horizon any public model publishes per day. The table stops at 16 rather than 30 for that reason."],
+        ["15 days", "The longest horizon any model in the app publishes per day. The table stops at 15 rather than 30 for that reason."],
         ["sunrise / sunset", "Sunrise and sunset for the selected place. Below them, civil twilight: dawn to dusk, while the sun is between 0\u00b0 and 6\u00b0 below the horizon. Computed on the device."]
       ],
-      note: "Sources: Open-Meteo (CC BY 4.0) for ECMWF, ICON, GFS, KNMI, DMI and the normals. Meteoblue and Visual Crossing appear once the Action has their keys. This is not an official forecast \u2014 check DHMZ for warnings."
+      note: "Sources: Open-Meteo (CC BY 4.0) for ECMWF, DWD, KNMI, DMI and the normals; Yr.no comes from api.met.no. Meteoblue appears once its key is typed in. This is not an official forecast \u2014 check DHMZ for warnings.",
+      keyOff: "<b>Meteoblue</b> needs a key in the <a href=\"#setup\">setup</a>. No key is set, so it is not used.",
+      keyOn: "<b>Meteoblue</b> needs a key in the <a href=\"#setup\">setup</a>. A key is set, so it is used in the comparison."
     }
   };
 
   var BASE_SOURCES = [
     ["ecmwf_ifs025", "ECMWF"],
-    ["icon_seamless", "ICON"],
-    ["gfs_seamless", "GFS"],
+    ["icon_seamless", "DWD"],
     ["knmi_seamless", "KNMI"],
     ["dmi_seamless", "DMI"],
     ["met", "Yr.no"]
   ];
   var EXTRA_SOURCES = [
-    ["meteoblue", "Meteoblue"],
-    ["visualcrossing", "VC"]
+    ["meteoblue", "Meteoblue"]
   ];
 
+  /* Every provider with an hourly line can drive the home screen. Yr.no and
+     Meteoblue publish days only, so they stay out of the picker. */
+  var HOME_PROVIDERS = ["ecmwf_ifs025", "icon_seamless",
+                        "knmi_seamless", "dmi_seamless"];
+  var REFRESH_STEPS = [0, 5, 10, 15, 20, 25, 30];
+
+  /* Every row names the service and, underneath, where it comes from. Without
+     the second line "Yr.no" reads like a website while the others read like
+     national institutes; with it all six sit on the same axis. */
+  var SOURCE_COUNTRY = {
+    hr: { ecmwf_ifs025: "Europa", icon_seamless: "Njema\u010dka",
+          knmi_seamless: "Nizozemska", dmi_seamless: "Danska",
+          met: "Norve\u0161ka", meteoblue: "\u0160vicarska" },
+    en: { ecmwf_ifs025: "Europe", icon_seamless: "Germany",
+          knmi_seamless: "Netherlands", dmi_seamless: "Denmark",
+          met: "Norway", meteoblue: "Switzerland" }
+  };
+
+  function sourceLabel(key, name) {
+    var countries = SOURCE_COUNTRY[state.lang] || SOURCE_COUNTRY.hr;
+    return '<span class="sn">' + name + "</span>" +
+      '<span class="sc">' + (countries[key] || "") + "</span>";
+  }
+
+  /* The home provider is a setting; "auto" keeps the old order. Only models
+     with hourly data can drive the home screen, which is why the setup panel
+     offers just the Open-Meteo ones. */
+  function chosenProvider() {
+    return state.provider && state.provider !== "auto" ? state.provider : "";
+  }
+
   function primaryKey(place) {
-    var order = ["ecmwf_ifs025", "icon_seamless", "gfs_seamless"], i;
+    var order = ["ecmwf_ifs025", "icon_seamless"], i, key, chosen = chosenProvider();
+    if (!place.models) return null;
+    if (chosen && place.models[chosen]) return chosen;
     for (i = 0; i < order.length; i++) {
-      if (place.models && place.models[order[i]]) return order[i];
+      if (place.models[order[i]]) return order[i];
     }
+    for (key in place.models) return key;
     return null;
   }
 
+  /* The forecast on the home screen is one model, not an average: ECMWF if it
+     answered, otherwise ICON, otherwise whatever did. This is what the label
+     under the current conditions says. */
+  function homeSource(place) {
+    var key = primaryKey(place), i;
+    for (i = 0; i < BASE_SOURCES.length; i++) {
+      if (BASE_SOURCES[i][0] === key) return BASE_SOURCES[i][1] + " \u00b7 Open-Meteo";
+    }
+    return "Open-Meteo";
+  }
+
   /* The comparison is now the only place these numbers appear, so it lists
-     every provider, the one driving the forecast included. Meteoblue and
-     Visual Crossing appear once the Action has keys for them. */
+     every provider, the one driving the forecast included. Meteoblue appears
+     once the Action has a key for it. */
   function sourcesFor(place) {
     var list = [], i;
     for (i = 0; i < BASE_SOURCES.length; i++) {
@@ -720,7 +825,8 @@
   }
 
   var state = { data: null, normals: null, direct: false, cityId: "zagreb", lang: "hr",
-                favs: [], panel: "hours", custom: [] };
+                favs: [], panel: "hours", custom: [], provider: "auto",
+                refreshMin: 15 };
 
   var DEFAULT_FAVS = ["zagreb", "sljeme", "komiza", "krk", "samobor", "motovun", "losinj"];
 
@@ -803,6 +909,7 @@
     if (/EdgiOS|Edg\//i.test(ua)) return "Edge";
     if (/OPiOS|OPR\//i.test(ua)) return "Opera";
     if (/SamsungBrowser/.test(ua)) return "Samsung";
+    if (/Chrome\//.test(ua)) return "Chrome";
     if (/Safari/.test(ua)) return "Safari";
     return navigator.appName || "browser";
   }
@@ -945,13 +1052,20 @@
   }
 
   function primarySeries(place) {
-    var order = ["ecmwf_ifs025", "icon_seamless", "gfs_seamless"], i, key;
-    if (!place.models) return null;
-    for (i = 0; i < order.length; i++) {
-      if (place.models[order[i]]) return place.models[order[i]];
+    var key = primaryKey(place);
+    return key && place.models ? place.models[key] : null;
+  }
+
+  /* The hourly line that belongs to the chosen home provider. Caches from
+     before this setting kept the axis only on place.hourly, so borrow it. */
+  function hourlyFor(place) {
+    var key = primaryKey(place), line;
+    if (key && place.hourlyModels) line = place.hourlyModels[key];
+    if (line) {
+      if (!line.time && place.hourly) line.time = place.hourly.time;
+      return line;
     }
-    for (key in place.models) return place.models[key];
-    return null;
+    return place.hourly || null;
   }
 
   /* Drop trailing days the primary model has no values for. */
@@ -1074,10 +1188,12 @@
     return "https://api.open-meteo.com/v1/forecast" +
       "?latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lon.toFixed(4) +
       "&elevation=" + (place.ele || 0) +
-      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum" +
-      "&hourly=temperature_2m,weather_code,precipitation_probability,is_day" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum," +
+      "wind_speed_10m_max,wind_direction_10m_dominant" +
+      "&hourly=temperature_2m,weather_code,precipitation_probability,is_day," +
+      "wind_speed_10m,wind_direction_10m,relative_humidity_2m" +
       "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,is_day" +
-      "&forecast_days=16&forecast_hours=36" +
+      "&forecast_days=15&forecast_hours=36" +
       "&timezone=Europe%2FZagreb&models=" + MODELS.join(",");
   }
 
@@ -1116,42 +1232,12 @@
     request.send();
   }
 
-  function fetchVisualCrossing(place, key, done) {
-    var url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/timeline/" +
-      place.lat.toFixed(4) + "," + place.lon.toFixed(4) +
-      "?unitGroup=metric&include=days&elements=datetime,tempmax,tempmin" +
-      "&contentType=json&key=" + encodeURIComponent(key);
-    var request = new XMLHttpRequest();
-    request.open("GET", url, true);
-    request.timeout = 20000;
-    request.onload = function () {
-      if (request.status < 200 || request.status >= 300) { done(false); return; }
-      try {
-        var days = (JSON.parse(request.responseText) || {}).days || [];
-        if (!days.length) { done(false); return; }
-        place.providers = place.providers || {};
-        place.providers.visualcrossing = {
-          time: days.map(function (d) { return d.datetime; }),
-          min: days.map(function (d) { return d.tempmin; }),
-          max: days.map(function (d) { return d.tempmax; })
-        };
-        savePlaceCache(place);
-        done(true);
-      } catch (e) { done(false); }
-    };
-    request.onerror = request.ontimeout = function () { done(false); };
-    request.send();
-  }
-
-  /* Both answer with CORS headers, so a key typed on the device is enough and
+  /* It answers with CORS headers, so a key typed on the device is enough and
      no server has to hold it. */
   function fetchProviders(place, done) {
-    var meteoblue = getKey("meteoblue"), vc = getKey("visualcrossing");
-    var pending = 0, any = false;
-    function finish(ok) { any = any || ok; pending--; if (pending === 0) done(any); }
-    if (meteoblue) { pending++; fetchMeteoblue(place, meteoblue, finish); }
-    if (vc) { pending++; fetchVisualCrossing(place, vc, finish); }
-    if (!pending) done(false);
+    var meteoblue = getKey("meteoblue");
+    if (meteoblue) fetchMeteoblue(place, meteoblue, done);
+    else done(false);
   }
 
 
@@ -1308,7 +1394,7 @@
   }
 
   function mergeOne(place, block) {
-    var merged = {}, j, suffix;
+    var merged = {}, j, suffix, hasModel = false;
     for (j = 0; j < MODELS.length; j++) {
       suffix = "_" + MODELS[j];
       if (!block.daily || !block.daily["temperature_2m_max" + suffix]) continue;
@@ -1317,10 +1403,15 @@
         max: block.daily["temperature_2m_max" + suffix],
         min: block.daily["temperature_2m_min" + suffix],
         code: block.daily["weather_code" + suffix],
-        precip: block.daily["precipitation_sum" + suffix]
+        precip: block.daily["precipitation_sum" + suffix],
+        wind: block.daily["wind_speed_10m_max" + suffix] || null,
+        wdir: block.daily["wind_direction_10m_dominant" + suffix] || null
       };
+      hasModel = true;
     }
-    if (merged[MODELS[0]]) place.models = merged;
+    /* Do not insist on ECMWF: if it is the one that failed, ICON still has to
+       reach the screen. */
+    if (hasModel) place.models = merged;
     if (block.current) place.current = block.current;
     var hourly = parseHourly(block, place);
     if (hourly) {
@@ -1331,6 +1422,11 @@
 
   var HOURLY_FIELDS = [["temperature_2m", "temp"], ["weather_code", "code"],
                        ["precipitation_probability", "precip"], ["is_day", "day"]];
+
+  /* Wind and humidity are extra: a model without them keeps its temperature
+     row in the comparison instead of vanishing from the table. */
+  var HOURLY_EXTRA = [["wind_speed_10m", "wind"], ["wind_direction_10m", "wdir"],
+                      ["relative_humidity_2m", "humidity"]];
 
   /* Hourly values come back suffixed per model. The forecast strip needs one
      line, the hourly comparison needs every model, so keep both; they share
@@ -1346,7 +1442,13 @@
         if (!values) { slot = null; break; }
         slot[HOURLY_FIELDS[j][1]] = values;
       }
-      if (slot) models[key] = slot;
+      if (slot) {
+        slot.time = data.time;
+        for (j = 0; j < HOURLY_EXTRA.length; j++) {
+          slot[HOURLY_EXTRA[j][1]] = data[HOURLY_EXTRA[j][0] + "_" + key] || null;
+        }
+        models[key] = slot;
+      }
     }
     key = primaryKey(place);
     if (key) keys.push(key);
@@ -1361,7 +1463,8 @@
     return {
       primary: { time: data.time, temp: models[primary].temp,
                  code: models[primary].code, precip: models[primary].precip,
-                 day: models[primary].day },
+                 day: models[primary].day, wind: models[primary].wind,
+                 wdir: models[primary].wdir, humidity: models[primary].humidity },
       models: models
     };
   }
@@ -1471,14 +1574,31 @@
     $("overlay").className = "overlay";
   }
 
-  var SOURCE_LINKS = [
+  /* The setup panel lists every provider from the legend and these endpoints
+     behind them, so a link is always the exact address the app calls. */
+  var API_LINKS = [
     ["Open-Meteo \u2014 prognoza",
      "https://api.open-meteo.com/v1/forecast?latitude=45.81&longitude=15.98&daily=temperature_2m_max"],
     ["Open-Meteo \u2014 arhiva (normale)",
      "https://archive-api.open-meteo.com/v1/archive?latitude=45.81&longitude=15.98&start_date=2020-01-01&end_date=2020-01-31&daily=temperature_2m_max"],
+    ["api.met.no \u2014 locationforecast",
+     "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=45.81&lon=15.98"],
     ["GitHub Pages \u2014 normals.json",
      "https://rulac.github.io/weather-hub/normals.json"]
   ];
+
+  var ICON_LEGEND = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    'stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>' +
+    '<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' +
+    "</svg>";
+  var ICON_SETUP = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" ' +
+    'y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" ' +
+    'y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" ' +
+    'y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" ' +
+    'y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" ' +
+    'y1="16" x2="23" y2="16"/></svg>';
 
   var logLines = [];
 
@@ -1516,27 +1636,61 @@
     return "";
   }
 
+  function providerName(key) {
+    for (var i = 0; i < BASE_SOURCES.length; i++) {
+      if (BASE_SOURCES[i][0] === key) return BASE_SOURCES[i][1];
+    }
+    return key;
+  }
+
+  function radioRow(name, value, checked, label) {
+    return '<label class="lg-radio"><input type="radio" name="' + name +
+      '" value="' + value + '"' + (checked ? ' checked' : "") + "> " +
+      label + "</label>";
+  }
+
   function renderInstall() {
-    var html = '<div class="lg-h">' + t("installProfile") + "</div>";
+    var legend = LEGEND[state.lang], html = "", i, url;
+    html += '<div class="lg-h">' + t("homeProviderTitle") + "</div>";
+    html += '<div class="lg-note" style="margin-top:0">' + t("homeProviderHint") + "</div>";
+    html += radioRow("home-provider", "auto", state.provider === "auto",
+                     t("providerAuto"));
+    for (i = 0; i < HOME_PROVIDERS.length; i++) {
+      html += radioRow("home-provider", HOME_PROVIDERS[i],
+                       state.provider === HOME_PROVIDERS[i],
+                       providerName(HOME_PROVIDERS[i]));
+    }
+    html += '<div class="lg-h">' + t("refreshTitle") + "</div>";
+    html += '<div class="lg-note" style="margin-top:0">' + t("refreshHint") + "</div>";
+    for (i = 0; i < REFRESH_STEPS.length; i++) {
+      html += radioRow("refresh-interval", String(REFRESH_STEPS[i]),
+                       state.refreshMin === REFRESH_STEPS[i],
+                       REFRESH_STEPS[i] === 0 ? t("refreshNow")
+                         : REFRESH_STEPS[i] + " " + t("refreshMinLabel"));
+    }
+    html += '<div class="lg-h">' + t("installProfile") + "</div>";
     html += '<a class="installbtn" href="https://rulac.github.io/weather-hub/trust.mobileconfig">' +
       t("installProfileOpen") + "</a>";
     html += '<div class="lg-note" style="margin-top:8px">' + t("installProfileHint") + "</div>";
     html += '<div class="lg-h">' + t("installSources") + "</div>";
-    var i;
-    for (i = 0; i < SOURCE_LINKS.length; i++) {
-      html += '<div class="lg-row"><div class="k">' + SOURCE_LINKS[i][0] +
-        '</div><div class="v"><a href="' + SOURCE_LINKS[i][1] + '">' +
-        SOURCE_LINKS[i][1].replace(/^https:\/\//, "") + "</a></div></div>";
+    for (i = 0; i < legend.sources.length; i++) {
+      url = legend.sources[i][2];
+      html += '<div class="lg-row"><div class="k">' + legend.sources[i][0] +
+        '</div><div class="v">' + (url
+          ? '<a href="' + url + '" target="_blank">' + hostOf(url) + "</a>"
+          : "") + "</div></div>";
+    }
+    html += '<div class="lg-h">' + t("installApis") + "</div>";
+    for (i = 0; i < API_LINKS.length; i++) {
+      html += '<div class="lg-row"><div class="k">' + API_LINKS[i][0] +
+        '</div><div class="v"><a href="' + API_LINKS[i][1] + '" target="_blank">' +
+        hostOf(API_LINKS[i][1]) + "</a></div></div>";
     }
     html += '<div class="lg-h">' + t("installKeys") + "</div>";
     html += '<div class="lg-row"><div class="k">Meteoblue</div>' +
       '<div class="v"><input class="keyinput" id="key-meteoblue" type="text" ' +
       'autocapitalize="off" autocorrect="off" spellcheck="false" value="' +
       getKey("meteoblue") + '"></div></div>';
-    html += '<div class="lg-row"><div class="k">Visual Crossing</div>' +
-      '<div class="v"><input class="keyinput" id="key-visualcrossing" type="text" ' +
-      'autocapitalize="off" autocorrect="off" spellcheck="false" value="' +
-      getKey("visualcrossing") + '"></div></div>';
     html += '<div class="lg-row"><div class="k"></div><div class="v">' +
       '<button type="button" class="keybtn" id="save-keys">' + t("installSave") +
       '</button> <button type="button" class="keybtn danger" id="reset-app">' +
@@ -1561,7 +1715,7 @@
       renderLegend();
       $("legend-body").scrollTop = 0;
       $("legend-panel").className = "overlay open";
-    } else if (name === "instalacija") {
+    } else if (name === "setup") {
       renderInstall();
       $("install-body").scrollTop = 0;
       $("install").className = "overlay open";
@@ -1578,8 +1732,13 @@
     window.location.hash = name || "";
   }
 
+  function hostOf(url) {
+    return String(url).replace(/^https?:\/\//, "").replace(/^www\./, "")
+      .replace(/\/.*$/, "");
+  }
+
   function renderLegend() {
-    var legend = LEGEND[state.lang], html = "", i, name;
+    var legend = LEGEND[state.lang], html = "", i, name, url;
     html += '<div class="lg-h">' + legend.icons + "</div><div class=\"lg-icons\">";
     for (i = 0; i < WH.order.length; i++) {
       name = WH.order[i];
@@ -1590,9 +1749,14 @@
     html += "</div>";
     html += '<div class="lg-h">' + legend.abbr + "</div>";
     for (i = 0; i < legend.sources.length; i++) {
+      url = legend.sources[i][2];
       html += '<div class="lg-row"><div class="k">' + legend.sources[i][0] +
-        '</div><div class="v">' + legend.sources[i][1] + "</div></div>";
+        '</div><div class="v">' + legend.sources[i][1] +
+        (url ? '<br><a href="' + url + '" target="_blank">' + hostOf(url) + "</a>" : "") +
+        "</div></div>";
     }
+    html += '<div class="lg-keynote">' +
+      (getKey("meteoblue") ? legend.keyOn : legend.keyOff) + "</div>";
     html += '<div class="lg-h">' + legend.marks + "</div>";
     for (i = 0; i < legend.notes.length; i++) {
       html += '<div class="lg-row"><div class="k">' + legend.notes[i][0] +
@@ -1611,8 +1775,50 @@
     return place.lat.toFixed(2) + "\u00b0, " + place.lon.toFixed(2) + "\u00b0";
   }
 
-  function renderCurrent(place) {
+  /* The home block used to come from Open-Meteo's best-match current reading
+     while the strips came from ECMWF, so the same hour could show two
+     temperatures. Read the current hour of the primary model instead and keep
+     the current block as the fallback for an old cache. */
+  function currentValues(place) {
     var current = place.current || {};
+    var values = {
+      temperature_2m: current.temperature_2m,
+      weather_code: current.weather_code,
+      wind_speed_10m: current.wind_speed_10m,
+      relative_humidity_2m: current.relative_humidity_2m,
+      is_day: current.is_day
+    };
+    var hourly = hourlyFor(place);
+    if (hourly && hourly.time) {
+      var at = hourStartIndex(hourly.time);
+      if (at.index >= 0) {
+        if (hourly.temp && hourly.temp[at.index] !== null &&
+            hourly.temp[at.index] !== undefined) {
+          values.temperature_2m = hourly.temp[at.index];
+        }
+        if (hourly.code && hourly.code[at.index] !== null &&
+            hourly.code[at.index] !== undefined) {
+          values.weather_code = hourly.code[at.index];
+        }
+        if (hourly.wind && hourly.wind[at.index] !== null &&
+            hourly.wind[at.index] !== undefined) {
+          values.wind_speed_10m = hourly.wind[at.index];
+        }
+        if (hourly.humidity && hourly.humidity[at.index] !== null &&
+            hourly.humidity[at.index] !== undefined) {
+          values.relative_humidity_2m = hourly.humidity[at.index];
+        }
+        if (hourly.day && hourly.day[at.index] !== null &&
+            hourly.day[at.index] !== undefined) {
+          values.is_day = hourly.day[at.index];
+        }
+      }
+    }
+    return values;
+  }
+
+  function renderCurrent(place) {
+    var current = currentValues(place);
     var series = primarySeries(place);
     var night = current.is_day === 0 ||
       (current.is_day === undefined && !isDayNow(place));
@@ -1624,6 +1830,7 @@
         '<div class="cond">' + conditionText(current.weather_code) + "</div>" +
         t("wind") + " <b>" + round(current.wind_speed_10m) + " km/h</b><br>" +
         t("humidity") + " <b>" + round(current.relative_humidity_2m) + " %</b>" +
+        '<div class="src">' + homeSource(place) + "</div>" +
       "</div>" +
       '<div class="mcol">' + sunBlock(place) + "</div>";
     $("place-name").textContent = place.name;
@@ -1631,10 +1838,23 @@
     return series ? trimSeries(series) : null;
   }
 
+  /* Wind arrives in km/h and degrees (the direction it blows from). The arrow
+     points where it is going, so north wind points down the screen. */
+  function windHtml(speed, dir) {
+    if (speed === null || speed === undefined) return "";
+    var html = "";
+    if (dir !== null && dir !== undefined && speed >= 1) {
+      var deg = Math.round(dir);
+      html = '<span class="ar" style="-webkit-transform:rotate(' + deg +
+        'deg);transform:rotate(' + deg + 'deg)">\u2193</span>';
+    }
+    return html + round(speed);
+  }
+
   /* The next 24 hours, from the current one. The point of the screen is what
      the hours ahead look like, so this sits above the daily strip. */
   function renderHours(place) {
-    var hourly = place.hourly, html = "", i, stamp, date, hour, night, shown = 0;
+    var hourly = hourlyFor(place), html = "", i, stamp, date, hour, night, shown = 0;
     if (!hourly || !hourly.time || !hourly.time.length) {
       $("hours").innerHTML = '<div class="hnote">' + t("noData") + "</div>";
       return;
@@ -1660,6 +1880,8 @@
         '<div class="hd">' + (hour === 0 ? dayName(date.getDay()) : "") + "</div>" +
         '<div class="g">' + iconForWmo(hourly.code ? hourly.code[i] : null, night) + "</div>" +
         '<div class="temp">' + round(hourly.temp[i]) + "\u00b0</div>" +
+        '<div class="w">' + windHtml(hourly.wind ? hourly.wind[i] : null,
+                                     hourly.wdir ? hourly.wdir[i] : null) + "</div>" +
         '<div class="pp">' + (mm !== null && mm !== undefined && mm >= 20 ? mm + "%" : "") +
         "</div></div>";
     }
@@ -1697,7 +1919,9 @@
         '<div class="g">' + iconForWmo(series.code ? series.code[i] : null) + "</div>" +
         '<div class="hi">' + round(series.max[i]) + "\u00b0</div>" +
         '<div class="lo">' + round(series.min[i]) + "\u00b0</div>" +
-        '<div class="sp">' + (deviation >= 4 ? "\u00b1" + Math.round(deviation) : "") + "</div>" +
+        '<div class="w">' + windHtml(series.wind ? series.wind[i] : null,
+                                    series.wdir ? series.wdir[i] : null) + "</div>" +
+        '<div class="sp">' + (deviation >= 2 ? "\u00b1" + Math.round(deviation) : "") + "</div>" +
         "</div>";
     }
     $("strip").innerHTML = html;
@@ -1716,10 +1940,10 @@
     for (i = 0; i < BASE_SOURCES.length; i++) {
       key = BASE_SOURCES[i][0];
       if (models[key]) {
-        rows.push([BASE_SOURCES[i][1], models[key]]);
+        rows.push([key, BASE_SOURCES[i][1], models[key]]);
       } else if (!place.hourlyModels && place.hourly && key === primaryKey(place)) {
         /* a cache from before the hourly comparison: one line is better than none */
-        rows.push([BASE_SOURCES[i][1], place.hourly]);
+        rows.push([key, BASE_SOURCES[i][1], place.hourly]);
       }
     }
     return rows;
@@ -1729,7 +1953,7 @@
     var axis = place.hourly ? place.hourly.time : null;
     var rows = hourlyRows(place), head = "<th></th>", body = "", hours = 24;
     var at = axis ? hourStartIndex(axis) : { index: -1 };
-    var i, j, date, hour, cls, value, night;
+    var i, j, date, hour, cls, value, night, temps, deviation;
     if (!axis || at.index < 0) {
       $("hour-head").innerHTML = head;
       $("hour-body").innerHTML =
@@ -1748,17 +1972,35 @@
     $("hour-head").innerHTML = head;
 
     for (j = 0; j < rows.length; j++) {
-      body += '<tr><td class="src">' + rows[j][0] + "</td>";
+      body += '<tr><td class="src">' + sourceLabel(rows[j][0], rows[j][1]) + "</td>";
       for (i = at.index; i < axis.length && i < at.index + hours; i++) {
         hour = +axis[i].slice(11, 13);
         cls = i === at.index ? ' class="cur"' : (hour === 0 ? ' class="weekend"' : "");
-        value = rows[j][1].temp ? rows[j][1].temp[i] : null;
-        night = rows[j][1].day ? rows[j][1].day[i] === 0 : false;
+        value = rows[j][2].temp ? rows[j][2].temp[i] : null;
+        night = rows[j][2].day ? rows[j][2].day[i] === 0 : false;
         body += "<td" + cls + ">" +
           (value === null || value === undefined
             ? '<span class="na">\u00b7</span>'
-            : iconForWmo(rows[j][1].code ? rows[j][1].code[i] : null, night) +
+            : iconForWmo(rows[j][2].code ? rows[j][2].code[i] : null, night) +
               round(value) + "\u00b0") + "</td>";
+      }
+      body += "</tr>";
+    }
+
+    /* A single source has nothing to differ from; otherwise the spread reads
+       the same way as in the daily table, only per hour instead of per day. */
+    if (rows.length > 1) {
+      body += '<tr class="spread"><td class="src">' + t("spreadRow") + "</td>";
+      for (i = at.index; i < axis.length && i < at.index + hours; i++) {
+        hour = +axis[i].slice(11, 13);
+        cls = i === at.index ? ' class="cur"' : (hour === 0 ? ' class="weekend"' : "");
+        temps = [];
+        for (j = 0; j < rows.length; j++) {
+          temps.push(rows[j][2].temp ? rows[j][2].temp[i] : null);
+        }
+        deviation = spread(temps);
+        body += "<td" + cls + ">" +
+          (deviation >= 2 ? "\u00b1" + Math.round(deviation) : "") + "</td>";
       }
       body += "</tr>";
     }
@@ -1801,7 +2043,7 @@
     for (j = 0; j < sources.length; j++) {
       provider = seriesFor(place, sources[j][0]);
       body += '<tr><td class="src' + (provider ? "" : " off") + '">' +
-        sources[j][1] + "</td>";
+        sourceLabel(sources[j][0], sources[j][1]) + "</td>";
       for (i = 0; i < series.time.length; i++) {
         at = dayIndex(provider, series.time[i]);
         hi = at >= 0 ? provider.max[at] : null;
@@ -1827,7 +2069,7 @@
       }
       deviation = spread(highs);
       body += "<td>" +
-        (deviation >= 4 ? "\u00b1" + Math.round(deviation) : "") + "</td>";
+        (deviation >= 2 ? "\u00b1" + Math.round(deviation) : "") + "</td>";
     }
     body += "</tr>";
     $("day-body").innerHTML = body;
@@ -1901,12 +2143,15 @@
     else if (age < 1) label = t("dataFresh");
     else label = t("dataAgo", { n: age });
     var tag = statusTag();
-    $("foot-left").textContent = t("dataLabel") + " " + label + (tag ? " \u00b7 " + tag : "");
+    $("foot-left").textContent = t("dataLabel") + " " + label +
+      (tag ? " \u00b7 " + tag : "") + " \u00b7 " + t("refreshLabel") + " " +
+      (state.refreshMin === 0 ? t("refreshNow")
+        : state.refreshMin + " " + t("refreshMinLabel"));
 
     var errors = state.data.errors && state.data.errors.length
       ? state.data.errors.join(" \u00b7 ") : "";
-    $("legend-link").textContent = t("legend");
-    $("install-link").textContent = t("install");
+    $("legend-link").innerHTML = ICON_LEGEND + "<span>" + t("legend") + "</span>";
+    $("install-link").innerHTML = ICON_SETUP + "<span>" + t("setup") + "</span>";
     $("foot-right").innerHTML =
       (errors ? '<span class="err">' + errors + "</span> \u00b7 " : "") +
       (window.navigator.standalone ? t("kiosk") : browserName()) +
@@ -1980,12 +2225,8 @@
     retryDelay = Math.min(retryDelay * 2, 60000);
   }
 
-  var MODELS = ["ecmwf_ifs025", "icon_seamless", "gfs_seamless",
+  var MODELS = ["ecmwf_ifs025", "icon_seamless",
                 "knmi_seamless", "dmi_seamless"];
-  var MODEL_LABELS = {
-    ecmwf_ifs025: "ECMWF", icon_seamless: "ICON", gfs_seamless: "GFS",
-    knmi_seamless: "KNMI", dmi_seamless: "DMI"
-  };
 
   /* Each provider is asked separately: a slow or dead one must not hold back
      the numbers that did arrive. */
@@ -2056,9 +2297,27 @@
   }
 
   /* iOS suspends standalone web apps; on resume the page may be hours old. */
+  function refreshMs() {
+    return (state.refreshMin > 0 ? state.refreshMin : 1) * 60 * 1000;
+  }
+
+  function setProvider(value) {
+    state.provider = value;
+    try { window.localStorage.setItem(STORE_PROVIDER, value); } catch (e) {}
+    if (state.data) render();
+  }
+
+  function setRefreshMinutes(value) {
+    var minutes = parseInt(value, 10);
+    if (isNaN(minutes) || REFRESH_STEPS.indexOf(minutes) < 0) return;
+    state.refreshMin = minutes;
+    try { window.localStorage.setItem(STORE_REFRESH, String(minutes)); } catch (e) {}
+    renderFooter();
+  }
+
   function refreshIfStale() {
     if (!state.data) { bootstrap(); return; }
-    if ((new Date()).getTime() - lastSuccess > 5 * 60 * 1000) {
+    if ((new Date()).getTime() - lastSuccess > refreshMs()) {
       retryDelay = 3000;
       refresh();
     }
@@ -2132,15 +2391,21 @@
   $("log-close").onclick = function () { $("logpanel").className = "overlay"; };
 
   $("legend-link").onclick = function () { go("legenda"); };
-  $("install-link").onclick = function () { go("instalacija"); };
+  $("install-link").onclick = function () { go("setup"); };
   $("legend-close").onclick = function () { go(""); };
   $("install-close").onclick = function () { go(""); };
+
+  document.addEventListener("change", function (event) {
+    var node = event.target;
+    if (!node || !node.name) return;
+    if (node.name === "home-provider") setProvider(node.value);
+    else if (node.name === "refresh-interval") setRefreshMinutes(node.value);
+  }, false);
 
   document.addEventListener("click", function (event) {
     var id = event.target && event.target.id;
     if (id === "save-keys") {
       setKey("meteoblue", ($("key-meteoblue").value || "").trim());
-      setKey("visualcrossing", ($("key-visualcrossing").value || "").trim());
       go("");
       refresh();
     } else if (id === "reset-app") {
@@ -2294,12 +2559,22 @@
   }
 
   var savedCity = null, savedLang = null, savedFavs = null;
+  var savedProvider = null, savedRefresh = null;
   try {
     savedCity = window.localStorage.getItem(STORE_CITY);
     savedLang = window.localStorage.getItem(STORE_LANG);
     savedFavs = window.localStorage.getItem(STORE_FAVS);
+    savedProvider = window.localStorage.getItem(STORE_PROVIDER);
+    savedRefresh = window.localStorage.getItem(STORE_REFRESH);
   } catch (e) {}
   if (savedCity) state.cityId = savedCity;
+  if (savedProvider === "auto" || HOME_PROVIDERS.indexOf(savedProvider) >= 0) {
+    state.provider = savedProvider;
+  }
+  if (savedRefresh !== null && savedRefresh !== "") {
+    var savedMinutes = parseInt(savedRefresh, 10);
+    if (REFRESH_STEPS.indexOf(savedMinutes) >= 0) state.refreshMin = savedMinutes;
+  }
   state.favs = parseFavorites(savedFavs);
   try {
     var savedPanel = window.localStorage.getItem(STORE_PANEL);
@@ -2318,7 +2593,9 @@
   applyHash();
   loadNormals();
   refresh();
-  window.setInterval(refresh, 15 * 60 * 1000);
+  window.setInterval(function () {
+    if ((new Date()).getTime() - lastSuccess >= refreshMs()) refresh();
+  }, 60 * 1000);
   window.setInterval(checkVersion, 10 * 60 * 1000);
   document.addEventListener("touchstart", wakeScreen, true);
   document.addEventListener("click", wakeScreen, true);
